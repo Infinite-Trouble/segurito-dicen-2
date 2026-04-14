@@ -95,7 +95,7 @@ El proyecto no incluye migraciones automáticas, por eso debes crear las tablas 
 ```bash
 cd apps/user-service
 source .venv/bin/activate
-python - <<'PY'
+python3 - <<'PY'
 from src.infrastructure.db import models, database
 models.Base.metadata.create_all(bind=database.engine)
 print('Tablas de users_db creadas')
@@ -107,7 +107,7 @@ PY
 ```bash
 cd apps/loan-service
 source .venv/bin/activate
-python - <<'PY'
+python3 - <<'PY'
 from src.infrastructure import models, database
 models.Base.metadata.create_all(bind=database.engine)
 print('Tablas de loans_db creadas')
