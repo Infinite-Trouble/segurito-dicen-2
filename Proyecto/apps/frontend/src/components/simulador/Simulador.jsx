@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 
-const Simulador = () => {
+const Simulador = ({ setVista, setDatosSimulacion }) => {
   const [inputs, setInputs] = useState({ monto: '', cuotas: '' });
   const [resultados, setResultados] = useState(null);
+  const [errorSesion, setErrorSesion] = useState(false);
+  
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CL', {
@@ -38,6 +40,25 @@ const Simulador = () => {
 
   const handleChange = (e) => {
     setInputs({ ...inputs, [e.target.name]: e.target.value });
+  };
+
+  const handleSolicitar = () => {
+    // Verificamos si existe un token en la sesión actual
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    
+    if (!token) {
+      setErrorSesion(true); // Mostramos la alerta
+      return; // Detenemos la ejecución para que no avance
+    }
+
+    // Si pasa la validación, limpiamos errores y avanzamos
+    setErrorSesion(false);
+    setDatosSimulacion({
+      monto: inputs.monto,
+      cuotas: inputs.cuotas,
+      cuota_mensual: resultados.cuota_mensual
+    });
+    setVista('solicitud');
   };
 
   return (
@@ -164,7 +185,14 @@ const Simulador = () => {
               )}
 
               <div className="mt-12 space-y-4">
+                {errorSesion && (
+                <div className="bg-[#ffdad6] border border-[#ba1a1a] text-[#ba1a1a] px-4 py-3 rounded-md text-sm text-center">
+                  Debes <button onClick={() => setVista('login')} className="font-bold underline hover:brightness-75">iniciar sesión</button> para solicitar un préstamo.
+                </div>
+                )}
+                
                 <button 
+                  onClick={handleSolicitar}
                   disabled={!resultados}
                   className="w-full bg-[#8df5e4] text-[#00201c] font-bold py-5 rounded-md hover:brightness-110 transition-all active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
