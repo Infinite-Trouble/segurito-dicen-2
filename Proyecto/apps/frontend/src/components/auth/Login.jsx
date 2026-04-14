@@ -1,4 +1,3 @@
-import './Auth.css';
 
 /**
  * Componente de Formulario de Inicio de Sesión.
