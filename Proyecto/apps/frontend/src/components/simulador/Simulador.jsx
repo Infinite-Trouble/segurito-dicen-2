@@ -42,8 +42,7 @@ const Simulador = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      
-      {/* --- NUEVO ENCABEZADO AÑADIDO AQUÍ --- */}
+
       <header className="mb-10 max-w-2xl">
         <h1 className="text-4xl sm:text-5xl font-extrabold text-blue-900 tracking-tight mb-4">
           Simulador de Crédito de Consumo
@@ -52,7 +51,6 @@ const Simulador = () => {
           Diseñamos soluciones financieras transparentes. Calcula tu cuota mensual en segundos y descubre la tasa que mejor se adapta a tus metas personales.
         </p>
       </header>
-      {/* ------------------------------------- */}
 
       {/* CONTENEDOR DE LAS DOS COLUMNAS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
