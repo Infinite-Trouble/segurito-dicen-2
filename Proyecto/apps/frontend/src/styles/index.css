@@ -1,3 +1,22 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Estilos personalizados para los sliders del simulador */
+.range-slider::-webkit-slider-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #00346f;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: -8px;
+}
+
+.range-slider::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #00346f;
+    cursor: pointer;
+    border: none;
+}
