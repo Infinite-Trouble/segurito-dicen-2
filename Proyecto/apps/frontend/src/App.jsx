@@ -4,10 +4,12 @@ import Login from './components/auth/Login';
 import Registro from './components/auth/Register';
 import Dashboard from './components/user/Dashboard';
 import Perfil from './components/user/Perfil';
+import Formulario from './components/solicitud/Formulario';
 
 function App() {
   const [vista, setVista] = useState('inicio');
   const [token, setToken] = useState(localStorage.getItem('token') || sessionStorage.getItem('token'));
+  const [datosSimulacion, setDatosSimulacion] = useState(null);
 
   const [usuarioData, setUsuarioData] = useState(() => {
     const saved = localStorage.getItem('user_info');
@@ -101,18 +103,12 @@ function App() {
       </header>
 
       <main style={{ marginTop: '30px' }}>
-        {vista === 'inicio' && <Simulador />}
+        {vista === 'inicio' && (<Simulador setVista={setVista} setDatosSimulacion={setDatosSimulacion} />)}
         {vista === 'login' && <Login handleChange={handleChange} handleSubmit={handleSubmit} setVista={setVista} formData={formData} />}
         {vista === 'registro' && <Registro handleChange={handleChange} handleSubmit={handleSubmit} setVista={setVista} />}
         {vista === 'dashboard' && token && <Dashboard token={token} setVista={setVista} />}
-
-        {vista === 'perfil' && token && (
-          <Perfil 
-            token={token} 
-            setVista={setVista} 
-            usuarioActual={usuarioData} 
-          />
-        )}
+        {vista === 'solicitud' && (<Formulario simulacionData={datosSimulacion} setVista={setVista} />)}
+        {vista === 'perfil' && token && (<Perfil token={token} setVista={setVista} usuarioActual={usuarioData} />)}
       </main>
     </div>
   );
