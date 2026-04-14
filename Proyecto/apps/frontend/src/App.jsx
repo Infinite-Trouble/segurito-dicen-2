@@ -12,7 +12,7 @@ function App() {
   const [datosSimulacion, setDatosSimulacion] = useState(null);
 
   const [usuarioData, setUsuarioData] = useState(() => {
-    const saved = localStorage.getItem('user_info');
+    const saved = localStorage.getItem('user_info') || sessionStorage.getItem('user_info');
     return saved ? JSON.parse(saved) : null;
   });
 
@@ -42,14 +42,17 @@ function App() {
       if (response.ok) {
         if (vista === 'login') {
           const storage = formData.recordarme ? localStorage : sessionStorage;
+          
+          // 1. Guardamos el token
           storage.setItem('token', data.access_token);
           
-          // GUARDAR INFO DEL USUARIO: Esto evita la pantalla blanca en Perfil
-          setUsuarioData(data.user);
-          if (formData.recordarme) {
-            localStorage.setItem('user_info', JSON.stringify(data.user));
+          // 2. Guardamos la info del usuario SIEMPRE (en el storage que corresponda)
+          if (data.user) {
+            storage.setItem('user_info', JSON.stringify(data.user));
           }
-
+          
+          // 3. Actualizamos los estados de React
+          setUsuarioData(data.user);
           setToken(data.access_token);
           setVista('dashboard');
         } else {
@@ -73,43 +76,93 @@ function App() {
     setVista('inicio');
   };
 
-  return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid gray', paddingBottom: '10px' }}>
-        <button onClick={() => setVista('inicio')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}>
-          Sistema de Préstamos
-        </button>
-
-        <div>
-          {token ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <span>Bienvenido, {usuarioData?.nombre}</span>
-              {vista === 'inicio' && (
-                <button onClick={() => setVista('dashboard')} style={{ backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}>
-                  Mi Panel / Dashboard
-                </button>
-              )}
-              <button onClick={handleLogout} style={{ padding: '5px 10px', cursor: 'pointer' }}>
-                Cerrar Sesión
-              </button>
+return (
+    <div className="min-h-screen bg-[#f7f9fb] text-slate-800 flex flex-col font-sans">
+      
+      {/* HEADER DINÁMICO */}
+      <header className="bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-50 transition-all duration-300 border-b border-gray-200">
+        <div className="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+          
+          {/* Logo y Marca */}
+          <button onClick={() => setVista('inicio')} className="flex items-center gap-3 text-left group">
+            <div className="bg-[#00346f] p-2 rounded-xl group-hover:scale-105 transition-transform flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance</span>
             </div>
-          ) : (
-            <>
-              {vista !== 'login' && <button onClick={() => setVista('login')}>Inicio de Sesión</button>}
-              {vista !== 'registro' && <button onClick={() => setVista('registro')} style={{ marginLeft: '10px' }}>Registro</button>}
-            </>
-          )}
+            <div className="flex flex-col">
+              <span className="text-xl font-extrabold tracking-tight text-[#00346f] leading-none">
+                Sistema de Préstamos
+              </span>
+            </div>
+          </button>
+
+          {/* Acciones de Navegación */}
+          <div className="flex items-center gap-4">
+            {token ? (
+              // USUARIO LOGUEADO
+              <>
+                <div className="hidden md:flex flex-col items-end mr-2">
+                  <span className="text-sm font-semibold text-slate-600">
+                    {/* Aquí mostramos el nombre dinámicamente */}
+                    Hola, {usuarioData?.nombre || 'Usuario'}!
+                  </span>
+                </div>
+                
+                {vista === 'inicio' && (
+                  <button 
+                    onClick={() => setVista('dashboard')} 
+                    className="bg-[#8df5e4] text-[#00201c] px-4 sm:px-5 py-2 rounded-xl font-bold text-sm hover:brightness-105 transition-all shadow-sm flex items-center gap-2 active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-lg">dashboard</span>
+                    Mi Panel
+                  </button>
+                )}
+                
+                <button 
+                  onClick={handleLogout} 
+                  className="text-slate-500 hover:text-red-600 transition-colors p-2 rounded-lg hover:bg-red-50 flex items-center justify-center"
+                  title="Cerrar Sesión"
+                >
+                  <span className="material-symbols-outlined text-xl">logout</span>
+                </button>
+              </>
+            ) : (
+              // USUARIO INVITADO
+              <>
+                {vista !== 'login' && (
+                  <button 
+                    onClick={() => setVista('login')} 
+                    className="text-[#00346f] font-bold px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors text-sm"
+                  >
+                    Iniciar Sesión
+                  </button>
+                )}
+                {vista !== 'registro' && (
+                  <button 
+                    onClick={() => setVista('registro')} 
+                    className="bg-[#00346f] text-white px-4 sm:px-5 py-2 rounded-xl font-bold text-sm hover:bg-blue-900 transition-colors shadow-sm"
+                  >
+                    Crear Cuenta
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      <main style={{ marginTop: '30px' }}>
-        {vista === 'inicio' && (<Simulador setVista={setVista} setDatosSimulacion={setDatosSimulacion} />)}
+      {/* ÁREA DE CONTENIDO PRINCIPAL */}
+      <main className="flex-grow w-full max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
+        {vista === 'inicio' && <Simulador setVista={setVista} setDatosSimulacion={setDatosSimulacion} />}
         {vista === 'login' && <Login handleChange={handleChange} handleSubmit={handleSubmit} setVista={setVista} formData={formData} />}
         {vista === 'registro' && <Registro handleChange={handleChange} handleSubmit={handleSubmit} setVista={setVista} />}
         {vista === 'dashboard' && token && <Dashboard token={token} setVista={setVista} />}
-        {vista === 'solicitud' && (<Formulario simulacionData={datosSimulacion} setVista={setVista} />)}
-        {vista === 'perfil' && token && (<Perfil token={token} setVista={setVista} usuarioActual={usuarioData} />)}
+        {vista === 'solicitud' && <Formulario simulacionData={datosSimulacion} setVista={setVista} />}
+        {vista === 'perfil' && token && <Perfil token={token} setVista={setVista} usuarioActual={usuarioData} />}
       </main>
+
+      {/* FOOTER CORPORATIVO */}
+      
+
     </div>
   );
 }
