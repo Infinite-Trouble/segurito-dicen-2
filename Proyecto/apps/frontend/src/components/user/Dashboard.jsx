@@ -7,7 +7,7 @@ const Dashboard = ({ token, setVista }) => {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const response = await fetch('http://localhost:8001/mis-datos', {
+        const response = await fetch('http://localhost:8001/datos', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
