@@ -26,9 +26,8 @@ Diseño clave:
 ## 3. Clonar repo
 
 ```bash
-cd ~/Proyectos
-git clone https://<tu-git-host>/prestamos.git
-cd prestamos
+git clone https://gitlab.com/grupo054/GRUPO05-2025-PROYINF.git
+cd Proyecto/
 ```
 
 ## 4. Configurar la base de datos
