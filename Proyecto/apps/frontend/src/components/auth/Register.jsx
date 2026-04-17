@@ -1,11 +1,15 @@
 import { useState } from 'react';
+import { validarRut } from '../../utils/validaciones';
 
 /**
  * Componente de Formulario de Registro de Usuario.
  */
-const Registro = ({ handleChange, handleSubmit, setVista }) => {
+const Registro = ({ handleChange, handleSubmit, setVista, formData }) => {
   // Estado local para mostrar/ocultar la contraseña visualmente
   const [mostrarPassword, setMostrarPassword] = useState(false);
+
+  // Validación del RUT en tiempo real basada en el estado global formData
+  const rutEsValido = formData.rut ? validarRut(formData.rut) : true;
 
   return (
     <div className="w-full flex items-center justify-center p-6">
@@ -37,11 +41,21 @@ const Registro = ({ handleChange, handleSubmit, setVista }) => {
               <input 
                 name="rut" 
                 onChange={handleChange} 
+                value={formData.rut}
                 required 
                 placeholder="12345678-9" 
                 type="text"
-                className="w-full bg-transparent border-0 border-b border-slate-300 focus:ring-0 focus:border-[#00346f] focus:border-b-2 transition-colors py-2 text-slate-900 font-medium placeholder:text-slate-400 outline-none px-0"
+                className={`w-full bg-transparent border-0 border-b transition-colors py-2 font-medium placeholder:text-slate-400 outline-none px-0 ${
+                  !rutEsValido 
+                    ? 'border-red-500 text-red-600 focus:border-red-600' 
+                    : 'border-slate-300 focus:border-[#00346f] focus:border-b-2 text-slate-900'
+                }`}
               />
+              {!rutEsValido && (
+                <span className="text-[10px] text-red-500 font-bold animate-pulse">
+                  RUT no válido (Ej: 12.345.678-9)
+                </span>
+              )}
             </div>
 
             {/* Grid para Nombre y Apellido */}
@@ -121,7 +135,12 @@ const Registro = ({ handleChange, handleSubmit, setVista }) => {
             <div className="pt-8 flex flex-col space-y-4">
               <button 
                 type="submit"
-                className="w-full bg-gradient-to-r from-[#00346f] to-[#004a99] text-white font-bold py-4 rounded-md transition-all active:scale-95 shadow-md hover:shadow-lg"
+                disabled={!rutEsValido}
+                className={`w-full text-white font-bold py-4 rounded-md transition-all active:scale-95 shadow-md hover:shadow-lg ${
+                  rutEsValido 
+                    ? 'bg-gradient-to-r from-[#00346f] to-[#004a99]' 
+                    : 'bg-slate-400 cursor-not-allowed'
+                }`}
               >
                 Registrarme
               </button>
