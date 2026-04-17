@@ -12,6 +12,9 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
   const [opcionesSugeridas, setOpcionesSugeridas] = useState([]);
   const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
   const [busquedaTerminada, setBusquedaTerminada] = useState(false);
+  const [mensajeFaltante, setMensajeFaltante] = useState('');
+  const [probabilidadActual, setProbabilidadActual] = useState(null);
+
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CL', {
@@ -54,89 +57,42 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
   };
 
   const generarSugerencias = async () => {
+    const faltantes = [];
+
+    if (socioeconomico.ingreso === '') faltantes.push('Ingreso Líquido Mensual');
+    if (socioeconomico.deuda === '') faltantes.push('Deuda Mensual Actual');
+
+    if (faltantes.length > 0) {
+      setMensajeFaltante(`Ingrese el/los campo/s faltante/s (${faltantes.join(' y ')}) para obtener sugerencias de préstamos.`);
+      return;
+    } else {
+      setMensajeFaltante('');
+    }
     setCargandoSugerencias(true);
     setBusquedaTerminada(false);
-    setOpcionesSugeridas([]); // Limpiamos búsquedas anteriores
+    setOpcionesSugeridas([]);
 
-    const ingreso = parseFloat(socioeconomico.ingreso);
-    const deuda = parseFloat(socioeconomico.deuda) || 0;
-    const factor = parseFloat(socioeconomico.contrato);
+    try {
+      const response = await fetch('http://localhost:8001/sugerencias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingreso: parseFloat(socioeconomico.ingreso),
+          deuda: parseFloat(socioeconomico.deuda) || 0,
+          factor_contrato: parseFloat(socioeconomico.contrato)
+        })
+      });
 
-    // Validamos que se haya puesto un ingreso válido
-    if (isNaN(ingreso) || ingreso <= 0) {
-      setCargandoSugerencias(false);
-      return;
-    }
-
-    // El sistema define 5 distintos escenarios a probar en el backend (entre 5 y 20 mill.)
-    const escenariosAProbar = [
-      { monto: 5000000, cuotas: 24 },
-      { monto: 8000000, cuotas: 36 },
-      { monto: 12000000, cuotas: 48 },
-      { monto: 15000000, cuotas: 60 },
-      { monto: 20000000, cuotas: 60 }
-    ];
-
-    const opcionesAprobables = [];
-
-    // Hacemos las peticiones al backend de forma paulatina para que nos dé las cuotas calculadas
-    for (const escenario of escenariosAProbar) {
-      try {
-        const response = await fetch('http://localhost:8001/simular', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            monto: escenario.monto,
-            cuotas: escenario.cuotas
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-
-          // FÓRMULA DE FACTOR DE RIESGO
-          const cargaFinanciera = (deuda + data.cuota_mensual) / (ingreso * factor);
-
-          // SOLO si es MENOR a 45% (que significa +50% probabilidad de aprobación) lo consideramos
-          if (cargaFinanciera <= 0.45) {
-            let probabilidad = '';
-            let tipoProbabilidad = '';
-
-            // Definimos rangos según tu regla de oro
-            if (cargaFinanciera <= 0.3) {
-              probabilidad = 'Alta (90% - 95%)';
-              tipoProbabilidad = 'alta';
-            } else {
-              probabilidad = 'Media (50% - 70%)';
-              tipoProbabilidad = 'media';
-            }
-
-            opcionesAprobables.push({
-              monto: escenario.monto,
-              cuotas: escenario.cuotas,
-              cuotaSimulada: data.cuota_mensual,
-              tasaAplicada: data.tasa_aplicada,
-              cae: data.cae,
-              totalPagar: data.total_pagar,
-              cargaFinanciera: cargaFinanciera,
-              probabilidad: probabilidad,
-              tipoProbabilidad: tipoProbabilidad
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error contactando al servidor en simulador inteligente", error);
+      if (response.ok) {
+        const data = await response.json();
+        setOpcionesSugeridas(data.opciones);
       }
+    } catch (error) {
+      console.error("Error contactando al servidor para pedir sugerencias", error);
+    } finally {
+      setCargandoSugerencias(false);
+      setBusquedaTerminada(true);
     }
-
-
-    // Ordenamos tomando los que tengan mejor probabilidad (menor carga financiera)
-    opcionesAprobables.sort((a, b) => a.cargaFinanciera - b.cargaFinanciera);
-
-    // Guardamos en el estado el TOP 3 de los mejores perfiles 
-    setOpcionesSugeridas(opcionesAprobables.slice(0, 3));
-    setCargandoSugerencias(false);
-    setBusquedaTerminada(true);
   };
 
   const handleSeleccionarSugerencia = (sugerencia) => {
@@ -148,21 +104,33 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const calcularProbabilidadEnVivo = (cuota) => {
-    const ingreso = parseFloat(socioeconomico.ingreso);
-    if (isNaN(ingreso) || ingreso <= 0) return null;
-
-    const deuda = parseFloat(socioeconomico.deuda) || 0;
-    const factor = parseFloat(socioeconomico.contrato);
-    const cargaFinanciera = (deuda + cuota) / (ingreso * factor);
-
-    if (cargaFinanciera <= 0.3) return { texto: 'Alta', color: 'text-green-300' };
-    if (cargaFinanciera <= 0.45) return { texto: 'Media', color: 'text-yellow-300' };
-    return { texto: 'Baja', color: 'text-[#ffb4ab]' }; // Rojo salmón por el dark theme
-  };
-
-  const probabilidadActual = resultados ? calcularProbabilidadEnVivo(resultados.cuota_mensual) : null;
-
+  useEffect(() => {
+    const buscarProbabilidad = async () => {
+      if (!resultados || !socioeconomico.ingreso) {
+        setProbabilidadActual(null);
+        return;
+      }
+      try {
+        const response = await fetch('http://localhost:8001/probabilidad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ingreso: parseFloat(socioeconomico.ingreso),
+            deuda: parseFloat(socioeconomico.deuda) || 0,
+            factor_contrato: parseFloat(socioeconomico.contrato),
+            cuota: resultados.cuota_mensual
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setProbabilidadActual(data);
+        }
+      } catch (error) {
+        console.error("Error consultando probabilidad", error);
+      }
+    };
+    buscarProbabilidad();
+  }, [resultados, socioeconomico]);
 
   const handleSolicitar = () => {
     // Verificamos si existe un token en la sesión actual
@@ -333,11 +301,25 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
             <button
               onClick={generarSugerencias}
 
-              disabled={cargandoSugerencias || !socioeconomico.ingreso}
+              disabled={cargandoSugerencias}
               className="w-full bg-teal-500 text-white font-bold py-4 rounded-md hover:bg-teal-600 transition-all disabled:opacity-50"
             >
               {cargandoSugerencias ? 'Calculando opciones...' : 'Ver sugerencias aprobables'}
             </button>
+
+            {/* NUEVO MENSAJE DE CAMPOS FALTANTES */}
+            {mensajeFaltante !== '' && (
+              <div className="mt-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-md animate-fade-in-up">
+                <div className="flex items-start">
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700 font-semibold leading-relaxed">
+                      {mensajeFaltante}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
 
             {/* NUEVO MENSAJE DE ADVERTENCIA */}
             {busquedaTerminada && opcionesSugeridas.length === 0 && (
@@ -368,7 +350,7 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
                           <span className="text-sm font-medium text-gray-500">{opcion.cuotas} Meses</span>
                         </div>
                         <div className="text-right">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${opcion.tipoProbabilidad === 'alta' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${opcion.tipo_probabilidad === 'alta' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
                             {opcion.probabilidad}
                           </span>
                         </div>
@@ -376,7 +358,7 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
 
                       <div className="flex justify-between items-center text-sm mb-4 border-t border-teal-100 pt-3 mt-3">
                         <span className="text-gray-600 font-medium">Cuota Mensual:</span>
-                        <span className="font-extrabold text-gray-900 text-lg">{formatCurrency(opcion.cuotaSimulada)}</span>
+                        <span className="font-extrabold text-gray-900 text-lg">{formatCurrency(opcion.cuota_simulada)}</span>
                       </div>
 
                       <button
