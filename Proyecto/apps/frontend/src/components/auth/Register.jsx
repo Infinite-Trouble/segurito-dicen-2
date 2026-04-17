@@ -38,7 +38,7 @@ const Registro = ({ handleChange, handleSubmit, setVista }) => {
                 name="rut" 
                 onChange={handleChange} 
                 required 
-                placeholder="12.345.678-9" 
+                placeholder="12345678-9" 
                 type="text"
                 className="w-full bg-transparent border-0 border-b border-slate-300 focus:ring-0 focus:border-[#00346f] focus:border-b-2 transition-colors py-2 text-slate-900 font-medium placeholder:text-slate-400 outline-none px-0"
               />

@@ -16,7 +16,7 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)):
     try:
         # Decodificamos el token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        # Asumiendo que guardaste el correo o un ID en el "sub" del token
+        
         usuario_id: str = payload.get("sub") 
         if usuario_id is None:
             raise credentials_exception

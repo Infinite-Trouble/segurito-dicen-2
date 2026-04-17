@@ -21,7 +21,7 @@ def calcular_prestamo(monto: float, cuotas: int):
     
     return {
         "cuota_mensual": round(cuota, 2),
-        "tasa_aplicada": tasa_mensual * 100,
+        "tasa_aplicada": (round(tasa_mensual * 100, 2)),
         "total_pagar": round(cuota * cuotas, 2),
         "cae": round((tasa_mensual * 12) * 100, 2) # Tasa anual aproximada
     }
