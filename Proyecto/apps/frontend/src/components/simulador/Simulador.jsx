@@ -11,6 +11,7 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
   });
   const [opcionesSugeridas, setOpcionesSugeridas] = useState([]);
   const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
+  const [busquedaTerminada, setBusquedaTerminada] = useState(false);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-CL', {
@@ -54,6 +55,7 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
 
   const generarSugerencias = async () => {
     setCargandoSugerencias(true);
+    setBusquedaTerminada(false);
     setOpcionesSugeridas([]); // Limpiamos búsquedas anteriores
 
     const ingreso = parseFloat(socioeconomico.ingreso);
@@ -134,6 +136,7 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
     // Guardamos en el estado el TOP 3 de los mejores perfiles 
     setOpcionesSugeridas(opcionesAprobables.slice(0, 3));
     setCargandoSugerencias(false);
+    setBusquedaTerminada(true);
   };
 
   const handleSeleccionarSugerencia = (sugerencia) => {
@@ -144,6 +147,22 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
     // Hacemos scroll suave hacia arriba para que el usuario pueda ver el panel azul y darle "Solicitar"
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const calcularProbabilidadEnVivo = (cuota) => {
+    const ingreso = parseFloat(socioeconomico.ingreso);
+    if (isNaN(ingreso) || ingreso <= 0) return null;
+
+    const deuda = parseFloat(socioeconomico.deuda) || 0;
+    const factor = parseFloat(socioeconomico.contrato);
+    const cargaFinanciera = (deuda + cuota) / (ingreso * factor);
+
+    if (cargaFinanciera <= 0.3) return { texto: 'Alta', color: 'text-green-300' };
+    if (cargaFinanciera <= 0.45) return { texto: 'Media', color: 'text-yellow-300' };
+    return { texto: 'Baja', color: 'text-[#ffb4ab]' }; // Rojo salmón por el dark theme
+  };
+
+  const probabilidadActual = resultados ? calcularProbabilidadEnVivo(resultados.cuota_mensual) : null;
+
 
   const handleSolicitar = () => {
     // Verificamos si existe un token en la sesión actual
@@ -320,6 +339,19 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
               {cargandoSugerencias ? 'Calculando opciones...' : 'Ver sugerencias aprobables'}
             </button>
 
+            {/* NUEVO MENSAJE DE ADVERTENCIA */}
+            {busquedaTerminada && opcionesSugeridas.length === 0 && (
+              <div className="mt-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-md animate-fade-in-up">
+                <div className="flex items-start">
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700 font-semibold leading-relaxed">
+                      No hay sugerencias de préstamos debido a su carga financiera. Intente probar con montos menores en el simulador o bajar sus deudas actuales.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
 
             {/* OPCIONES SUGERIDAS (Pasos 4 y 5) */}
             {opcionesSugeridas.length > 0 && (
@@ -392,6 +424,15 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
                       <span className="text-white/80 font-medium">Total a Pagar</span>
                       <span className="text-xl font-bold">{formatCurrency(resultados.total_pagar)}</span>
                     </div>
+                    {/* INDICADOR DE PROBABILIDAD EN VIVO */}
+                    {probabilidadActual && (
+                      <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/20">
+                        <span className="text-white/80 font-medium">Probabilidad Aprobación</span>
+                        <span className={`text-lg font-bold ${probabilidadActual.color} bg-white/10 px-3 py-1 rounded-full`}>
+                          {probabilidadActual.texto}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
