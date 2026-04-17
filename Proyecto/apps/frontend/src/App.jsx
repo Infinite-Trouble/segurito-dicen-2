@@ -43,15 +43,12 @@ function App() {
         if (vista === 'login') {
           const storage = formData.recordarme ? localStorage : sessionStorage;
           
-          // 1. Guardamos el token
           storage.setItem('token', data.access_token);
           
-          // 2. Guardamos la info del usuario SIEMPRE (en el storage que corresponda)
           if (data.user) {
             storage.setItem('user_info', JSON.stringify(data.user));
           }
           
-          // 3. Actualizamos los estados de React
           setUsuarioData(data.user);
           setToken(data.access_token);
           setVista('dashboard');
@@ -60,7 +57,14 @@ function App() {
           setVista('login');
         }
       } else {
-        alert(data.detail || "Error en la operación");
+        // Manejo mejorado de errores del backend (FastAPI/Pydantic)
+        let errorMsg = "Error en la operación";
+        if (Array.isArray(data.detail)) {
+          errorMsg = data.detail.map(err => err.msg).join(", ");
+        } else if (typeof data.detail === 'string') {
+          errorMsg = data.detail;
+        }
+        alert(errorMsg);
       }
     } catch (error) {
       alert("Error de conexión con el servidor");
@@ -102,7 +106,6 @@ return (
               <>
                 <div className="hidden md:flex flex-col items-end mr-2">
                   <span className="text-sm font-semibold text-slate-600">
-                    {/* Aquí mostramos el nombre dinámicamente */}
                     Hola, {usuarioData?.nombre || 'Usuario'}!
                   </span>
                 </div>
@@ -154,14 +157,11 @@ return (
       <main className="flex-grow w-full max-w-7xl mx-auto p-4 sm:p-6 md:p-10">
         {vista === 'inicio' && <Simulador setVista={setVista} setDatosSimulacion={setDatosSimulacion} />}
         {vista === 'login' && <Login handleChange={handleChange} handleSubmit={handleSubmit} setVista={setVista} formData={formData} />}
-        {vista === 'registro' && <Registro handleChange={handleChange} handleSubmit={handleSubmit} setVista={setVista} />}
+        {vista === 'registro' && <Registro handleChange={handleChange} handleSubmit={handleSubmit} setVista={setVista} formData={formData} />}
         {vista === 'dashboard' && token && <Dashboard token={token} setVista={setVista} />}
         {vista === 'solicitud' && <Formulario simulacionData={datosSimulacion} setVista={setVista} />}
         {vista === 'perfil' && token && <Perfil token={token} setVista={setVista} usuarioActual={usuarioData} />}
       </main>
-
-      {/* FOOTER CORPORATIVO */}
-      
 
     </div>
   );
