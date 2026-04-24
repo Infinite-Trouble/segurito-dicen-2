@@ -25,3 +25,64 @@ def calcular_prestamo(monto: float, cuotas: int):
         "total_pagar": round(cuota * cuotas, 2),
         "cae": round((tasa_mensual * 12) * 100, 2) # Tasa anual aproximada
     }
+
+def calcular_probabilidad(ingreso: float, deuda: float, factor: float, cuota: float) -> dict:
+    """Calcula la probabilidad en vivo en base a una cuota puntual"""
+    if ingreso <= 0:
+        return {"texto": "Baja", "color": "text-[#ffb4ab]"}
+    
+    carga_financiera = (deuda + cuota) / (ingreso * factor)
+    
+    if carga_financiera <= 0.3:
+        return {"texto": "Alta", "color": "text-green-300"}
+    elif carga_financiera <= 0.45:
+        return {"texto": "Media", "color": "text-yellow-300"}
+    else:
+        return {"texto": "Baja", "color": "text-[#ffb4ab]"}
+
+def generar_sugerencias_inteligentes(ingreso: float, deuda: float, factor: float) -> list:
+    """Calcula todo el batch de sugerencias directamente en el servidor"""
+    if ingreso <= 0:
+        return []
+
+    escenarios_a_probar = [
+        {"monto": 5000000, "cuotas": 24},
+        {"monto": 8000000, "cuotas": 36},
+        {"monto": 12000000, "cuotas": 48},
+        {"monto": 15000000, "cuotas": 60},
+        {"monto": 20000000, "cuotas": 60}
+    ]
+
+    opciones_aprobables = []
+
+    for esc in escenarios_a_probar:
+        # Reutilizamos nuestra propia función de cálculo en lugar de llamar a la API
+        simulacion = calcular_prestamo(esc["monto"], esc["cuotas"])
+        
+        carga_financiera = (deuda + simulacion["cuota_mensual"]) / (ingreso * factor)
+
+        if carga_financiera <= 0.45:
+            if carga_financiera <= 0.3:
+                probabilidad = "Alta (90% - 95%)"
+                tipo_probabilidad = "alta"
+            else:
+                probabilidad = "Media (50% - 70%)"
+                tipo_probabilidad = "media"
+
+            opciones_aprobables.append({
+                "monto": esc["monto"],
+                "cuotas": esc["cuotas"],
+                "cuota_simulada": simulacion["cuota_mensual"],
+                "tasa_aplicada": simulacion["tasa_aplicada"],
+                "cae": simulacion["cae"],
+                "total_pagar": simulacion["total_pagar"],
+                "carga_financiera": carga_financiera,
+                "probabilidad": probabilidad,
+                "tipo_probabilidad": tipo_probabilidad
+            })
+
+    # Ordenamos por menor carga financiera (las de mayor probabilidad primero)
+    opciones_aprobables.sort(key=lambda x: x["carga_financiera"])
+    
+    # Retornamos el top 3
+    return opciones_aprobables[:3]

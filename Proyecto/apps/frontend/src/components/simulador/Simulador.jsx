@@ -410,7 +410,12 @@ const Simulador = ({ setVista, setDatosSimulacion }) => {
                     {probabilidadActual && (
                       <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/20">
                         <span className="text-white/80 font-medium">Probabilidad Aprobación</span>
-                        <span className={`text-lg font-bold ${probabilidadActual.color} bg-white/10 px-3 py-1 rounded-full`}>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${probabilidadActual.texto === 'Alta'
+                            ? 'bg-green-100 text-green-700 border-green-200'
+                            : probabilidadActual.texto === 'Media'
+                              ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                              : 'bg-red-100 text-red-700 border-red-200'
+                          }`}>
                           {probabilidadActual.texto}
                         </span>
                       </div>

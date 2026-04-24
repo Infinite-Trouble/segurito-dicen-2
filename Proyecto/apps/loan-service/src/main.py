@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from logic.calculator import calcular_prestamo
+from logic.calculator import calcular_prestamo, calcular_probabilidad, generar_sugerencias_inteligentes
 from dependencies import get_current_user_id
 from sqlalchemy.orm import Session
 from infrastructure import database, models
@@ -68,3 +68,25 @@ def obtener_datos_usuario(
         "solicitudes": solicitudes,
         "prestamos": prestamos
     }
+
+@app.post("/probabilidad", response_model=schemas.ProbabilidadResponse)
+def endpoint_probabilidad(request: schemas.ProbabilidadRequest):
+    """Evalúa el riesgo de una simulación puntual en vivo"""
+    resultado = calcular_probabilidad(
+        ingreso=request.ingreso,
+        deuda=request.deuda,
+        factor=request.factor_contrato,
+        cuota=request.cuota
+    )
+    return resultado
+
+
+@app.post("/sugerencias", response_model=schemas.SugerenciasResponse)
+def endpoint_sugerencias(request: schemas.DatosSocioeconomicos):
+    """Genera inteligentemente las 3 mejores opciones procesadas"""
+    opciones = generar_sugerencias_inteligentes(
+        ingreso=request.ingreso,
+        deuda=request.deuda,
+        factor=request.factor_contrato
+    )
+    return {"opciones": opciones}
