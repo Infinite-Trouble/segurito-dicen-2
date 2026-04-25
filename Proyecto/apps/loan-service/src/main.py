@@ -61,7 +61,12 @@ def obtener_datos_usuario(
 ):
     # Buscamos en la base de datos filtrando por el ID del usuario
     solicitudes = db.query(models.Solicitud).filter(models.Solicitud.usuario_id == usuario_id).all()
-    prestamos = db.query(models.Prestamo).filter(models.Prestamo.usuario_id == usuario_id).all()
+    
+    # Para obtener los préstamos, debemos unir con la tabla Solicitud
+    prestamos = db.query(models.Prestamo)\
+        .join(models.Solicitud)\
+        .filter(models.Solicitud.usuario_id == usuario_id)\
+        .all()
     
     # Retornamos exactamente la estructura que espera tu Dashboard.jsx
     return {

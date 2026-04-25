@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
+from uuid import UUID
+from datetime import date
 
 class SimulacionRequest(BaseModel):
     monto: float
@@ -16,8 +18,9 @@ class SolicitudCreate(BaseModel):
     plazo: int
 
 class SolicitudResponse(BaseModel):
-    id: int
-    usuario_id: str
+    id: UUID
+    usuario_id: UUID
+    fecha: Optional[date] = None
     estado: str
     monto: int
     plazo: int
