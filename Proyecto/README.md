@@ -88,6 +88,14 @@ npm install
 ## 7. Inicializar tablas SQL
 
 El proyecto no incluye migraciones automáticas, por eso debes crear las tablas manualmente la primera vez.
+Los pasos 7.1 y 7.2 se vuelven obsoletos ahora que existen los archivos:
+01-users-schema.sql
+02-loans-schema.sql
+Ya que cuando se ejecuta
+```bash
+docker compose up -d
+```
+Se llama al contenido de db-init y se ejecuta la creación de las tablas automáticamente.
 
 ### 7.1. user-service
 
