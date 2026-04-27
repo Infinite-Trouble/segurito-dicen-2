@@ -25,7 +25,7 @@ const Formulario = ({ simulacionData, setVista }) => {
   const [errorSesion, setErrorSesion] = useState(false);
 
   const formatCurrency = (value) => {
-    if (!value) return '$0';
+    if (!value && value !== 0) return '$0';
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
       currency: 'CLP',
@@ -58,15 +58,7 @@ const Formulario = ({ simulacionData, setVista }) => {
         const resultado = await response.json();
         const data = { ...resultado.data, archivo_url: resultado.archivo_url, confirmado: false };
         
-        if (tipo === 'carnet') {
-          setDatosCarnet(data);
-          // Auto-completar datos personales si el OCR tuvo éxito
-          setFormData(prev => ({
-            ...prev,
-            rut: data.rut || prev.rut,
-            nombreCompleto: data.nombre || prev.nombreCompleto
-          }));
-        }
+        if (tipo === 'carnet') setDatosCarnet(data);
         if (tipo === 'liquidacion') setDatosLiquidacion(data);
         if (tipo === 'cotizaciones') setDatosCotizaciones(data);
         if (tipo === 'deuda') setDatosDeudas(data);
@@ -81,11 +73,38 @@ const Formulario = ({ simulacionData, setVista }) => {
     }
   };
 
+  // FUNCIÓN PARA EDITAR DATOS EXTRAÍDOS
+  const editaDatosDocumento = (tipo, campo, valor) => {
+    const setFunc = {
+      carnet: setDatosCarnet,
+      liquidacion: setDatosLiquidacion,
+      cotizaciones: setDatosCotizaciones,
+      deuda: setDatosDeudas
+    }[tipo];
+
+    setFunc(prev => ({ ...prev, [campo]: valor }));
+  };
+
   const handleConfirmar = (tipo) => {
-    if (tipo === 'carnet') setDatosCarnet({ ...datosCarnet, confirmado: true });
+    if (tipo === 'carnet') {
+      setDatosCarnet({ ...datosCarnet, confirmado: true });
+      // Sincronizar datos personales al confirmar carnet
+      setFormData(prev => ({
+        ...prev,
+        rut: datosCarnet.rut || prev.rut,
+        nombreCompleto: datosCarnet.nombre || prev.nombreCompleto
+      }));
+    }
     if (tipo === 'liquidacion') setDatosLiquidacion({ ...datosLiquidacion, confirmado: true });
     if (tipo === 'cotizaciones') setDatosCotizaciones({ ...datosCotizaciones, confirmado: true });
     if (tipo === 'deuda') setDatosDeudas({ ...datosDeudas, confirmado: true });
+  };
+
+  const handleReset = (tipo) => {
+    if (tipo === 'carnet') setDatosCarnet(null);
+    if (tipo === 'liquidacion') setDatosLiquidacion(null);
+    if (tipo === 'cotizaciones') setDatosCotizaciones(null);
+    if (tipo === 'deuda') setDatosDeudas(null);
   };
 
   const handleSubmit = async (e) => {
@@ -97,75 +116,52 @@ const Formulario = ({ simulacionData, setVista }) => {
     }
 
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    
-    if (!token) {
-      setErrorSesion(true);
-      return;
-    }
+    if (!token) { setErrorSesion(true); return; }
 
     const payload = {
       monto: simulacionData?.monto,
       plazo: simulacionData?.cuotas,
-      carnet: {
-        nombre: datosCarnet.nombre,
-        rut: datosCarnet.rut,
-        numero_cedula: datosCarnet.numero_cedula,
-        vigencia: datosCarnet.vigencia,
-        archivo_url: datosCarnet.archivo_url
-      },
-      liquidacion: {
-        total_haberes: datosLiquidacion.total_haberes,
-        total_descuento: datosLiquidacion.total_descuento,
-        sueldo_liquido: datosLiquidacion.sueldo_liquido,
-        archivo_url: datosLiquidacion.archivo_url
-      },
-      cotizaciones: {
-        meses_cotizados_consecutivos: datosCotizaciones.meses_cotizados_consecutivos,
-        rut_empleador: datosCotizaciones.rut_empleador,
-        archivo_url: datosCotizaciones.archivo_url
-      },
-      deudas: {
-        deudas_totales: datosDeudas.deudas_totales,
-        mora_90_dias: datosDeudas.mora_90_dias,
-        archivo_url: datosDeudas.archivo_url
-      }
+      carnet: { ...datosCarnet },
+      liquidacion: { ...datosLiquidacion },
+      cotizaciones: { ...datosCotizaciones },
+      deudas: { ...datosDeudas }
     };
 
     try {
       const response = await fetch('http://localhost:8001/solicitud', { 
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
 
       if (response.ok) {
-        alert('¡Éxito! Su solicitud y documentos han sido ingresados para revisión.');
+        alert('¡Éxito! Su solicitud ha sido ingresada.');
         setVista('dashboard'); 
       } else {
         const errorData = await response.json();
-        alert(errorData.detail || 'Hubo un problema al enviar la solicitud');
+        alert(errorData.detail || 'Error al enviar solicitud');
       }
     } catch (error) {
-      console.error('Error conectando con loan-service:', error);
-      alert('Error de conexión con el servidor de préstamos');
+      alert('Error de conexión con el servidor');
     }
   };
 
   // Componente para cada sección de documento
   const SeccionDocumento = ({ titulo, tipo, datos, cargando, labelArchivo }) => (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
+    <div className={`bg-white p-6 rounded-xl shadow-sm border transition-all duration-300 mb-6 ${datos?.confirmado ? 'border-green-200 bg-green-50/10' : 'border-slate-200'}`}>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-[#00346f] flex items-center gap-2">
-          <span className="material-symbols-outlined">description</span>
+          <span className="material-symbols-outlined">{datos?.confirmado ? 'check_circle' : 'description'}</span>
           {titulo}
         </h3>
         {datos?.confirmado && (
-          <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">check_circle</span> Confirmado
-          </span>
+          <button 
+            type="button" 
+            onClick={() => handleReset(tipo)}
+            className="text-xs font-bold text-slate-400 hover:text-[#ba1a1a] transition-colors flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-sm">restart_alt</span> Cambiar
+          </button>
         )}
       </div>
 
@@ -180,12 +176,7 @@ const Formulario = ({ simulacionData, setVista }) => {
               </div>
             ) : (
               <>
-                <input 
-                  type="file" 
-                  onChange={(e) => cargaDocumentos(e, tipo)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  accept="image/*,application/pdf"
-                />
+                <input type="file" onChange={(e) => cargaDocumentos(e, tipo)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*,application/pdf" />
                 <span className="material-symbols-outlined text-3xl text-slate-400">cloud_upload</span>
                 <p className="text-sm text-slate-600 mt-2 font-medium">Click o arrastra para subir</p>
               </>
@@ -194,28 +185,46 @@ const Formulario = ({ simulacionData, setVista }) => {
         </div>
       ) : (
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
             {Object.entries(datos).map(([key, value]) => {
               if (key === 'confirmado' || key === 'archivo_url') return null;
               return (
-                <div key={key}>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
-                  <p className="text-sm font-semibold text-slate-700">
-                    {typeof value === 'boolean' ? (value ? 'Sí' : 'No') : 
-                     (key.includes('monto') || key.includes('total') || key.includes('sueldo') || key.includes('deuda') || key.includes('mora')) ? formatCurrency(value) : value}
-                  </p>
+                <div key={key} className="flex flex-col">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{key.replace(/_/g, ' ')}</label>
+                  {datos.confirmado ? (
+                    <p className="text-sm font-semibold text-slate-700">
+                      {typeof value === 'boolean' ? (value ? 'Sí' : 'No') : 
+                       (key.includes('monto') || key.includes('total') || key.includes('sueldo') || key.includes('deuda') || key.includes('mora')) ? formatCurrency(value) : value}
+                    </p>
+                  ) : (
+                    <input 
+                      type={typeof value === 'number' ? 'number' : 'text'}
+                      value={value}
+                      onChange={(e) => editaDatosDocumento(tipo, key, typeof value === 'number' ? Number(e.target.value) : e.target.value)}
+                      className="bg-white border border-slate-200 rounded px-2 py-1 text-sm font-medium focus:border-[#00346f] outline-none transition-colors"
+                    />
+                  )}
                 </div>
               );
             })}
           </div>
           {!datos.confirmado && (
-            <button 
-              type="button"
-              onClick={() => handleConfirmar(tipo)}
-              className="w-full bg-[#00346f] text-white py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all active:scale-95"
-            >
-              Confirmar Datos
-            </button>
+            <div className="flex gap-3">
+              <button 
+                type="button"
+                onClick={() => handleConfirmar(tipo)}
+                className="flex-1 bg-[#00346f] text-white py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all active:scale-95"
+              >
+                Confirmar Datos
+              </button>
+              <button 
+                type="button"
+                onClick={() => handleReset(tipo)}
+                className="px-4 border border-slate-200 text-slate-500 rounded-lg font-bold text-sm hover:bg-slate-50 transition-all"
+              >
+                Subir otro
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -226,70 +235,38 @@ const Formulario = ({ simulacionData, setVista }) => {
     <div className="w-full max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       
       <div className="mb-8">
-        <button 
-          onClick={() => setVista('inicio')}
-          className="flex items-center gap-2 text-[#00346f] font-semibold text-sm hover:translate-x-[-4px] transition-transform"
-        >
-          <span className="material-symbols-outlined text-sm">arrow_back</span>
-          Volver a Simulación
+        <button onClick={() => setVista('inicio')} className="flex items-center gap-2 text-[#00346f] font-semibold text-sm hover:translate-x-[-4px] transition-transform">
+          <span className="material-symbols-outlined text-sm">arrow_back</span> Volver a Simulación
         </button>
       </div>
 
       <header className="mb-10 text-left">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-[#00346f] tracking-tight">Carga de Documentos y Solicitud</h1>
-        <p className="text-slate-500 mt-2 max-w-2xl">Para procesar tu solicitud, requerimos que escanees 4 documentos obligatorios. Nuestro sistema de OCR extraerá la información automáticamente.</p>
+        <h1 className="text-3xl md:text-4xl font-extrabold text-[#00346f] tracking-tight">Validación de Documentos</h1>
+        <p className="text-slate-500 mt-2 max-w-2xl">Por favor, revisa y confirma la información extraída de tus documentos. Puedes editarlos directamente si hay algún error.</p>
       </header>
 
       {errorSesion && (
         <section className="mb-8">
-          <div className="bg-[#ffdad6] p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4 border border-[#ba1a1a]/20">
+          <div className="bg-[#ffdad6] p-4 rounded-xl flex items-center justify-between gap-4 border border-[#ba1a1a]/20">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-[#ba1a1a]">error</span>
-              <span className="text-[#ba1a1a] font-medium">Tu sesión ha expirado por motivos de seguridad.</span>
+              <span className="text-[#ba1a1a] font-medium">Sesión expirada.</span>
             </div>
-            <button type="button" onClick={() => setVista('login')} className="bg-[#ba1a1a] text-white px-6 py-2 rounded-lg font-semibold text-sm">Ir a Iniciar Sesión</button>
+            <button type="button" onClick={() => setVista('login')} className="bg-[#ba1a1a] text-white px-6 py-2 rounded-lg font-semibold text-sm">Login</button>
           </div>
         </section>
       )}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* LADO IZQUIERDO: CARGA DE DOCUMENTOS */}
         <div className="lg:col-span-7">
-          <SeccionDocumento 
-            titulo="1. Cédula de Identidad" 
-            tipo="carnet" 
-            datos={datosCarnet} 
-            cargando={cargando.carnet} 
-            labelArchivo="Suba una foto legible de su carnet por ambos lados (o solo frontal)."
-          />
-          <SeccionDocumento 
-            titulo="2. Última Liquidación de Sueldo" 
-            tipo="liquidacion" 
-            datos={datosLiquidacion} 
-            cargando={cargando.liquidacion} 
-            labelArchivo="Suba su certificado de liquidación de sueldo más reciente."
-          />
-          <SeccionDocumento 
-            titulo="3. Certificado de Cotizaciones" 
-            tipo="cotizaciones" 
-            datos={datosCotizaciones} 
-            cargando={cargando.cotizaciones} 
-            labelArchivo="Suba su certificado de cotizaciones AFP de los últimos 12 meses."
-          />
-          <SeccionDocumento 
-            titulo="4. Certificado de Deudas" 
-            tipo="deuda" 
-            datos={datosDeudas} 
-            cargando={cargando.mora90} 
-            labelArchivo="Suba su informe de deudas CMF o similar."
-          />
+          <SeccionDocumento titulo="1. Cédula de Identidad" tipo="carnet" datos={datosCarnet} cargando={cargando.carnet} labelArchivo="Foto frontal legible de su carnet." />
+          <SeccionDocumento titulo="2. Última Liquidación de Sueldo" tipo="liquidacion" datos={datosLiquidacion} cargando={cargando.liquidacion} labelArchivo="Certificado de liquidación más reciente." />
+          <SeccionDocumento titulo="3. Certificado de Cotizaciones" tipo="cotizaciones" datos={datosCotizaciones} cargando={cargando.cotizaciones} labelArchivo="Certificado cotizaciones AFP últimos 12 meses." />
+          <SeccionDocumento titulo="4. Certificado de Deudas" tipo="deuda" datos={datosDeudas} cargando={cargando.mora90} labelArchivo="Informe de deudas CMF." />
 
-          {/* DATOS PERSONALES (Sincronizados con Carnet) */}
           <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 mt-8">
             <h2 className="text-xl font-bold text-[#00346f] mb-8 flex items-center gap-2">
-              <span className="material-symbols-outlined">person</span>
-              Datos Finales del Solicitante
+              <span className="material-symbols-outlined">person</span> Datos Finales
             </h2>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -310,29 +287,22 @@ const Formulario = ({ simulacionData, setVista }) => {
           </div>
         </div>
 
-        {/* LADO DERECHO: RESUMEN Y ENVÍO */}
         <div className="lg:col-span-5 flex flex-col gap-6 sticky top-8">
           <div className="bg-slate-50 p-8 rounded-xl border border-slate-200">
             <h2 className="text-xl font-bold text-[#00346f] mb-8 flex items-center gap-2">
-              <span className="material-symbols-outlined">analytics</span>
-              Resumen de tu Simulación
+              <span className="material-symbols-outlined">analytics</span> Resumen
             </h2>
-            
             <div className="space-y-6">
-              <div className="flex justify-between items-end border-b pb-4">
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase">Monto Solicitado</p>
-                  <p className="text-lg font-semibold text-[#00346f]">{formatCurrency(simulacionData?.monto)}</p>
-                </div>
+              <div className="flex justify-between border-b pb-4">
+                <span className="text-xs font-bold text-slate-500 uppercase">Monto</span>
+                <span className="font-semibold text-[#00346f]">{formatCurrency(simulacionData?.monto)}</span>
               </div>
-              <div className="flex justify-between items-end border-b pb-4">
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase">Plazo</p>
-                  <p className="text-lg font-semibold text-[#00346f]">{simulacionData?.cuotas} Meses</p>
-                </div>
+              <div className="flex justify-between border-b pb-4">
+                <span className="text-xs font-bold text-slate-500 uppercase">Plazo</span>
+                <span className="font-semibold text-[#00346f]">{simulacionData?.cuotas} Meses</span>
               </div>
               <div className="bg-[#00346f] p-6 rounded-lg text-white">
-                <p className="text-xs font-bold text-[#9bbdff] uppercase mb-1">Cuota Mensual Aprox</p>
+                <p className="text-xs font-bold text-[#9bbdff] uppercase mb-1">Cuota Mensual</p>
                 <p className="text-3xl font-extrabold">{formatCurrency(simulacionData?.cuota_mensual)}</p>
               </div>
               
@@ -347,13 +317,9 @@ const Formulario = ({ simulacionData, setVista }) => {
               >
                 Finalizar y Enviar
               </button>
-              <p className="text-center text-[10px] text-slate-400 mt-4">
-                Todos los documentos deben estar confirmados para habilitar el envío.
-              </p>
             </div>
           </div>
         </div>
-
       </form>
     </div>
   );
