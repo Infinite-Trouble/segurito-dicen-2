@@ -1,8 +1,11 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .logic.ocr_engine import OCREngine
 from .logic.parsers import DocumentParser
 from . import schemas
+import os
+import uuid
 
 app = FastAPI(title="Scan Service", description="Servicio de extracción de datos mediante OCR")
 
@@ -14,6 +17,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Crear directorio de uploads si no existe
+UPLOAD_DIR = "uploads"
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
+
+# Montar archivos estáticos para poder acceder a los documentos subidos
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 ocr_engine = OCREngine()
 
@@ -30,8 +41,14 @@ async def analyze_document(
     Recibe un archivo (imagen/pdf) y el tipo de documento para extraer sus datos.
     """
     try:
-        # 1. Leer contenido del archivo
+        # 1. Generar nombre único y guardar archivo
+        file_extension = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
         content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
         
         # 2. Ejecutar OCR
         raw_text = ocr_engine.detect_text(content)
@@ -55,10 +72,14 @@ async def analyze_document(
         if not data:
             raise HTTPException(status_code=422, detail="Error al extraer datos específicos del documento.")
 
+        # Construir URL (asumiendo que corre en el puerto 8002)
+        archivo_url = f"http://localhost:8002/uploads/{unique_filename}"
+
         return {
             "document_type": document_type,
             "data": data,
-            "raw_text": raw_text # Opcional: para depuración o para que el usuario vea el texto original
+            "archivo_url": archivo_url,
+            "raw_text": raw_text
         }
 
     except Exception as e:

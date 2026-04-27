@@ -61,6 +61,6 @@ CREATE TABLE IF NOT EXISTS certificado_cotizaciones (
 CREATE TABLE IF NOT EXISTS certificado_deudas (
     solicitud_id UUID PRIMARY KEY REFERENCES solicitud(id),
     deudas_totales INTEGER,
-    carga_financiera INTEGER,
+    mora_90_dias INTEGER,
     archivo_url TEXT
 );

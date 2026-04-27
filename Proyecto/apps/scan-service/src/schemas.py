@@ -4,6 +4,7 @@ from typing import Optional
 class ScanResult(BaseModel):
     document_type: str
     data: dict
+    archivo_url: str
     raw_text: Optional[str] = None
 
 class ErrorResponse(BaseModel):
@@ -26,4 +27,4 @@ class CotizacionesData(BaseModel):
 
 class DeudaData(BaseModel):
     deudas_totales: int
-    carga_financiera: int
+    mora_90_dias: int

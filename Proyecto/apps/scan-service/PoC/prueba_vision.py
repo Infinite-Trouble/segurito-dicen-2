@@ -36,24 +36,43 @@ def extraer_datos_cedula(path):
 
 # Ejemplo de que funciona el concepto vamo conchasumare webong!
 run, numero_cedula, vigencia, nombre_completo = extraer_datos_cedula("test_carnet.jpeg")
-print(f'rut: {run}, numero cedula: {numero_cedula}, vigencia: {vigencia}, nombre completo : {nombre_completo}')
+#print(f'rut: {run}, numero cedula: {numero_cedula}, vigencia: {vigencia}, nombre completo : {nombre_completo}')
 
 def extraer_datos_deuda(path):
     texts = detect_text(path)
     full_text = texts[0].description
-    print(full_text)
-    # acá pasa algo interesante porque se saca el rut también, podría ser una evaluación anticipada
-    # de si la persona es quien dice ser si acaso confirmamos que lo que se saca de rut es igual a lo que aparece aqui
-    # para pensar señores
-#u = extraer_datos_deuda("test_deuda.jpeg")
+
+    # Deuda Total: Buscamos después de la cabecera correspondiente
+    # Usamos \s+ para ser flexibles con espacios y saltos de línea
+    match_total = re.search(r"Deuda total\s+y estado de pago\s+[\$\s]*([\d.]+)", full_text, re.IGNORECASE)
+    deuda_total = match_total.group(1).replace(".", "") if match_total else "0"
+
+    # Mora 90+ días: Buscamos un monto con puntos seguido de una x
+    match_mora = re.search(r"([\d.]+)\s*[xX]", full_text)
+    mora_90 = match_mora.group(1).replace(".", "") if match_mora else "0"
+
+    print("--- RESULTADOS POC DEUDA ---")
+    print(f"Deuda Total: ${deuda_total}")
+    print(f"Mora +90 días (Carga Financiera): ${mora_90}")
+    print("-----------------------------")
+
+    return deuda_total, mora_90
+
+# Prueba del concepto para deuda
+#u = extraer_datos_deuda("deuda_mia.png")
+
 
 def extraer_datos_liquidacion(path):
     texts = detect_text(path)
     full_text = texts[0].description
     print(full_text)
 
+#u = extraer_datos_liquidacion("deuda_mia.png")
+
 def extraer_datos_cotizaciones(path):
     texts = detect_text(path)
     full_text = texts[0].description
     print(full_text)
+
+u = extraer_datos_cotizaciones("cot_pau.png")
 

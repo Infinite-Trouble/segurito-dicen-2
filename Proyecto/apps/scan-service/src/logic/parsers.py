@@ -79,38 +79,65 @@ class DocumentParser:
     @staticmethod
     def parse_liquidacion(text: str):
         """
-        Extrae datos de liquidación de sueldo.
-        Busca montos clave como Total Haberes y Líquido.
+        Extrae datos de liquidación de sueldo de forma robusta.
         """
-        # Implementación base de búsqueda de montos
-        total_haberes = re.search(r"TOTAL HABERES\s*\$?\s*([\d.]+)", text, re.IGNORECASE)
-        liquido = re.search(r"LÍQUIDO A PAGAR\s*\$?\s*([\d.]+)", text, re.IGNORECASE)
+        # Regex flexible para etiquetas y montos
+        total_haberes = re.search(r"TOTAL\s+HABERES\s*[\$\s]*([\d.]+)", text, re.IGNORECASE)
+        liquido = re.search(r"LÍQUIDO\s+A\s+PAGAR\s*[\$\s]*([\d.]+)", text, re.IGNORECASE)
+        descuentos = re.search(r"TOTAL\s+DESCUENTOS\s*[\$\s]*([\d.]+)", text, re.IGNORECASE)
         
+        haberes_int = DocumentParser._to_int(total_haberes) or 0
+        liquido_int = DocumentParser._to_int(liquido) or 0
+        descuentos_int = DocumentParser._to_int(descuentos) or 0
+
+        # Si no hay descuentos pero hay haberes y líquido, calculamos la diferencia
+        if haberes_int > 0 and liquido_int > 0 and descuentos_int == 0:
+            descuentos_int = haberes_int - liquido_int
+
         return {
-            "total_haberes": DocumentParser._to_int(total_haberes),
-            "sueldo_liquido": DocumentParser._to_int(liquido),
-            "total_descuento": None # Se puede calcular por diferencia
+            "total_haberes": haberes_int,
+            "sueldo_liquido": liquido_int,
+            "total_descuento": descuentos_int
         }
 
     @staticmethod
     def parse_cotizaciones(text: str):
         """
-        Extrae meses cotizados y RUT del empleador.
+        Extrae la cantidad de cotizaciones efectivamente pagadas y el RUT del empleador.
         """
-        # Ejemplo de búsqueda de meses (esto suele ser una cuenta de filas en una tabla)
+        # 1. Contar estados "Pagada/o" reales
+        # Buscamos todas las ocurrencias de Pagada/o
+        total_menciones_pagado = len(re.findall(r"\bPagad[ao]s?\b", text, re.IGNORECASE))
+        # Buscamos cuántas de esas están precedidas por "No"
+        total_no_pagados = len(re.findall(r"No\s+Pagad[ao]s?\b", text, re.IGNORECASE))
+        
+        # La diferencia son las cotizaciones efectivamente pagadas
+        conteo_efectivo = total_menciones_pagado - total_no_pagados
+        
+        # 2. Buscar RUT Empleador
+        # A veces aparece como "RUT EMPLEADOR" o cerca de los datos de la empresa
+        rut_empleador = re.search(r"RUT\s+(?:EMPLEADOR|EMPRESA)\s*[\:\s]*([\d.\-kK]+)", text, re.IGNORECASE)
+        
         return {
-            "meses_cotizados_consecutivos": 12, # Valor por defecto/mock
-            "rut_empleador": "76.XXX.XXX-X"
+            "meses_cotizados_consecutivos": max(0, conteo_efectivo),
+            "rut_empleador": rut_empleador.group(1).strip() if rut_empleador else "No detectado"
         }
 
     @staticmethod
     def parse_deudas(text: str):
         """
-        Extrae deudas totales del certificado CMF.
+        Extrae deudas totales y deudas en mora (+90 días) del certificado CMF.
+        La mora se identifica por el monto seguido de una 'x' según validación en PoC.
         """
+        # Deuda Total
+        match_total = re.search(r"Deuda\s+total\s+y\s+estado\s+de\s+pago\s+[\$\s]*([\d.]+)", text, re.IGNORECASE)
+        
+        # Mora 90+ días (identificada con una x)
+        match_mora = re.search(r"([\d.]+)\s*[xX]", text)
+        
         return {
-            "deudas_totales": 0,
-            "carga_financiera": 0
+            "deudas_totales": DocumentParser._to_int(match_total) or 0,
+            "mora_90_dias": DocumentParser._to_int(match_mora) or 0
         }
 
     @staticmethod

@@ -15,30 +15,42 @@ curl -X POST http://localhost:8002/analyze \
 
 
 
+Para hacer la consulta por las weas asociadas al prestamo:
+
+docker exec -it postgres_db psql -U user_admin -d loans_db -c "
+
+SELECT 
+
+s.id AS solicitud_id,
+
+s.monto,
+
+c.nombre AS nombre_carnet,
+
+c.rut AS rut_carnet,
+
+l.sueldo_liquido,
+
+cot.meses_cotizados_consecutivos AS meses_afp,
+
+d.deudas_totales,
+
+d.carga_financiera AS mora_90_dias
+
+FROM solicitud s
+
+LEFT JOIN documento_carnet c ON s.id = c.solicitud_id
+
+LEFT JOIN certificado_liquidacion l ON s.id = l.solicitud_id
+
+LEFT JOIN certificado_cotizaciones cot ON s.id = cot.solicitud_id
+
+LEFT JOIN certificado_deudas d ON s.id = d.solicitud_id
+
+ORDER BY s.fecha DESC LIMIT 1;"
 
 
 
-Aquí tienes el resumen ejecutivo para nuestra próxima sesión:
 
-  Estado del Proyecto: Microservicio scan-service
-
-   1. Arquitectura Implementada: Se creó un nuevo microservicio en apps/scan-service usando FastAPI, estructurado en capas:
-       * src/main.py: Endpoint POST /analyze que recibe archivos y el tipo de documento.
-       * src/logic/ocr_engine.py: Integración con Google Cloud Vision API para extracción de texto crudo.
-       * src/logic/parsers.py: Lógica de extracción mediante Regex.
-       * src/schemas.py: Modelos Pydantic para tipado de respuestas.
-   2. Hitos Logrados:
-       * Migración Exitosa: Se profesionalizó la prueba de concepto (POC) inicial.
-       * Parser de Cédula Chilena (Robusto): 
-           * Extrae RUT, Nombre Completo y Número de Documento.
-           * Lógica de Vigencia Inteligente: Identifica todas las fechas del documento y selecciona la mayor como fecha de
-             vencimiento (evitando confusiones con fechas de nacimiento o emisión).
-           * Soporta variaciones de formato (espacios, saltos de línea y meses de longitud variable como MAYO vs MAY).
-       * Ejecución: El servicio corre en el puerto 8002 y ha sido validado mediante curl con imágenes reales.
-   3. Pendientes:
-       * Perfeccionar Parsers: Ajustar las Regex para liquidacion (haberes/líquido), cotizaciones y deuda usando el raw_text de
-         muestras reales.
-       * Integración: Conectar el flujo para que los datos validados se guarden en las tablas de loans_db del loan-service.
-   1 cd apps/scan-service && source venv/bin/activate && uvicorn src.main:app --reload --host 0.0.0.0 --port 8002
-
-  ¡Nos vemos en la próxima sesión para terminar los parsers y la integración!
+PARA RESETEAR LOS CONTENEDORES Y QUE SE APLIQUEN LOS CAMBIOS EN LAS BASES DE DATOS
+docker compose down -v && docker compose up -d
