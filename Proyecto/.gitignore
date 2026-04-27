@@ -208,4 +208,4 @@ __marimo__/
 
 
 # Lo que se sube a la carpeta uploads es irrelevante
-uploads/*
+**/uploads/*
