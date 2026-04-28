@@ -49,7 +49,7 @@ class SolicitudCreate(BaseModel):
 class SolicitudResponse(BaseModel):
     id: UUID
     usuario_id: UUID
-    fecha: Optional[date] = None
+    fecha_solicitud: Optional[date] = None
     estado: str
     monto: int
     plazo: int

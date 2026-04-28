@@ -6,7 +6,7 @@ CREATE DATABASE loans_db;
 CREATE TABLE IF NOT EXISTS solicitud (
     id UUID PRIMARY KEY,
     usuario_id UUID NOT NULL, -- Referencia lógica al microservicio de usuarios
-    fecha DATE DEFAULT CURRENT_DATE,
+    fecha_solicitud DATE DEFAULT CURRENT_DATE,
     estado VARCHAR(50) DEFAULT 'PENDIENTE',
     monto BIGINT NOT NULL,
     plazo INTEGER NOT NULL,
