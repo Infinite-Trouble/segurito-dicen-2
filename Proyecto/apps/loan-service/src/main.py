@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from logic.calculator import calcular_prestamo, calcular_probabilidad, generar_sugerencias_inteligentes
-from dependencies import get_current_user_id
+from dependencies import get_current_user_id, get_current_user_email
 from sqlalchemy.orm import Session
 from infrastructure import database, models
 import schemas
+from infrastructure.notifications import enviar_correo_cambio_estado
 
 app = FastAPI(title="Loan Service", description="Servicio de simulaciones financieras")
 
@@ -36,8 +37,10 @@ def simular_credito(request: schemas.SimulacionRequest):
 @app.post("/solicitud", response_model=schemas.SolicitudResponse)
 def crear_solicitud(
     solicitud: schemas.SolicitudCreate, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    usuario_id: str = Depends(get_current_user_id)
+    usuario_id: str = Depends(get_current_user_id),
+    email: str = Depends(get_current_user_email)
 ):
     # 1. Crear la solicitud base
     nueva_solicitud = models.Solicitud(
@@ -87,7 +90,17 @@ def crear_solicitud(
     db.commit()
     db.refresh(nueva_solicitud)
 
+    # 4. Disparar el correo asíncrono en segundo plano
+    background_tasks.add_task(
+        enviar_correo_cambio_estado,
+        correo_destino=email,
+        monto=solicitud.monto,
+        plazo=solicitud.plazo,
+        nuevo_estado="Aprobado"
+    )
+
     return nueva_solicitud
+
 
 @app.get("/datos")
 def obtener_datos_usuario(

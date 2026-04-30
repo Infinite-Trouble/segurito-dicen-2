@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "jspdf": "^4.2.1",
+=======
+    "jspdf": "^2.5.2",
+>>>>>>> 534f6897ea76de74cbc306f0d132e18a678153db
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

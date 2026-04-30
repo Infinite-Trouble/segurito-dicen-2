@@ -70,7 +70,7 @@ def login(login_data: schemas.UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
     # 3. Generar el token incluyendo el RUT y el ID del usuario
-    token = create_access_token(data={"sub": str(user.id), "rut": user.rut})
+    token = create_access_token(data={"sub": str(user.id), "rut": user.rut, "email": user.email})
     
     return {
         "access_token": token,
