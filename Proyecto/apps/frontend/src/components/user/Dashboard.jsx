@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import jsPDF from 'jspdf';
 
 const Dashboard = ({ token, setVista }) => {
   const [datos, setDatos] = useState({ solicitudes: [], prestamos: [] });
@@ -44,9 +45,77 @@ const Dashboard = ({ token, setVista }) => {
       return <span className="px-3 py-1 bg-red-100 text-red-800 border border-red-200 text-[10px] font-bold rounded-full">Rechazada</span>;
     } else {
       // Amarillo tenue (Por defecto / Pendiente)
-      return <span className="px-3 py-1 bg-yellow-100 text-yellow-800 border border-yellow-200 text-[10px] font-bold rounded-full">Pendiente</span>;
+      return (<span className="px-3 py-1 bg-green-100 text-green-800 border border-green-200 text-[10px] font-bold rounded-full">Aprobado</span>);
     }
   };
+
+  const descargarContratoSolicitud = (s) => {
+    const datosGuardados = JSON.parse(localStorage.getItem('datos_firma')) || {};
+
+    const form = datosGuardados.formData || {};
+    const simulacion = datosGuardados.simulacionData || {};
+    const carnet = datosGuardados.carnet || {};
+    const liquidacion = datosGuardados.liquidacion || {};
+    const cotizaciones = datosGuardados.cotizaciones || {};
+    const deudas = datosGuardados.deudas || {};
+
+    const fecha = new Date();
+    const fechaTexto = fecha.toLocaleDateString('es-CL');
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text('CONTRATO DE PRÉSTAMO PERSONAL', 105, 20, { align: 'center' });
+
+    doc.setFontSize(11);
+
+    const textoContrato = `
+  En Valparaíso, Chile, con fecha ${fechaTexto}.
+
+  REUNIDOS
+
+  De una parte, Sistema de Préstamos Online, en adelante denominado "el Banco".
+
+  Y de otra parte, ${form.nombreCompleto || carnet.nombre || 'CLIENTE'}, con RUT ${form.rut || carnet.rut || 'NO INFORMADO'} y correo electrónico ${form.correo || 'NO INFORMADO'}, en adelante denominado "el Prestatario".
+
+  CLÁUSULAS
+
+  PRIMERA. OBJETO Y MONTO DEL PRÉSTAMO
+  El Banco concede al Prestatario un préstamo por un monto total de $${simulacion.monto || 'NO INFORMADO'} CLP.
+
+  SEGUNDA. PLAZO DE AMORTIZACIÓN
+  El plazo de devolución será de ${simulacion.cuotas || simulacion.plazo || 'NO INFORMADO'} meses.
+
+  TERCERA. CUOTAS DE AMORTIZACIÓN
+  El préstamo será pagado mediante cuotas mensuales. El valor aproximado de cada cuota será de $${simulacion.cuota_mensual || 'NO INFORMADO'} CLP.
+
+  CUARTA. VALIDACIÓN DE DOCUMENTOS
+  El Prestatario declara haber entregado y confirmado la información contenida en los siguientes documentos:
+  - Cédula de identidad.
+  - Última liquidación de sueldo.
+  - Certificado de cotizaciones.
+  - Certificado de deudas.
+
+  QUINTA. ANTECEDENTES FINANCIEROS
+  Sueldo informado: $${liquidacion.sueldo_liquido || liquidacion.sueldo || 'NO INFORMADO'} CLP.
+  Cotizaciones confirmadas: ${cotizaciones.confirmado ? 'Sí' : 'No'}.
+  Deudas confirmadas: ${deudas.confirmado ? 'Sí' : 'No'}.
+
+  SEXTA. FIRMA DIGITAL
+  El Prestatario valida su identidad mediante captura facial y firma digital en la plataforma.
+
+  Y en prueba de conformidad, firma digitalmente el presente contrato.
+  `;
+
+    const lineas = doc.splitTextToSize(textoContrato, 180);
+    doc.text(lineas, 15, 35);
+
+    doc.text('Firma del Prestatario: Registrada digitalmente', 15, 250);
+    doc.text('Firma del Banco: Sistema de Préstamos Online', 110, 250);
+
+    doc.save(`contrato-solicitud-${s.id}.pdf`);
+  };
+
 
   return (
     <div className="w-full max-w-5xl mx-auto py-8">
@@ -162,7 +231,7 @@ const Dashboard = ({ token, setVista }) => {
                     <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Monto</th>
                     <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Plazo</th>
                     <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Estado</th>
-                    <th className="px-6 py-4"></th>
+                    <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Contrato</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -174,6 +243,20 @@ const Dashboard = ({ token, setVista }) => {
                         <td className="px-6 py-5 text-sm text-slate-500">{s.plazo} meses</td>
                         <td className="px-6 py-5">
                           {renderEstadoSolicitud(s.estado)}
+                        </td>
+
+                        <td className="px-6 py-5">
+                          {s.estado?.toUpperCase() === 'APROBADA' || s.estado?.toUpperCase() === 'APROBADO' ? (
+                            <button
+                              onClick={() => descargarContratoSolicitud(s)}
+                              className="px-4 py-2 bg-[#00346f] text-white text-xs font-bold rounded-lg hover:bg-blue-900 transition-colors flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-sm">download</span>
+                              Descargar
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400">No disponible</span>
+                          )}
                         </td>
                       </tr>
                     ))

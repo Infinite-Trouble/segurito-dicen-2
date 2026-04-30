@@ -43,7 +43,8 @@ def crear_solicitud(
     nueva_solicitud = models.Solicitud(
         usuario_id=usuario_id,
         monto=solicitud.monto,
-        plazo=solicitud.plazo
+        plazo=solicitud.plazo,
+        estado="APROBADO"
     )
     db.add(nueva_solicitud)
     db.flush() # Flush para obtener el ID de la solicitud sin hacer commit todavía

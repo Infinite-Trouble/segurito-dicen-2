@@ -214,8 +214,16 @@ const Formulario = ({ simulacionData, setVista }) => {
         body: JSON.stringify(payload)
       });
       if (response.ok) {
-        alert('¡Éxito!');
-        setVista('dashboard'); 
+        localStorage.setItem('datos_firma', JSON.stringify({
+          formData,
+          simulacionData,
+          carnet: datosCarnet,
+          liquidacion: datosLiquidacion,
+          cotizaciones: datosCotizaciones,
+          deudas: datosDeudas
+        }));
+        alert('Documentos enviados correctamente. Ahora debes firmar.');
+        setVista('firma-digital'); 
       } else {
         const errorData = await response.json();
         alert(errorData.detail || 'Error al enviar');
