@@ -5,6 +5,7 @@ import Registro from './components/auth/Register';
 import Dashboard from './components/user/Dashboard';
 import Perfil from './components/user/Perfil';
 import Formulario from './components/solicitud/Formulario';
+import FirmaDigital from './components/firma/FirmaDigital';
 
 function App() {
   const [vista, setVista] = useState('inicio');
@@ -161,6 +162,7 @@ return (
         {vista === 'dashboard' && token && <Dashboard token={token} setVista={setVista} />}
         {vista === 'solicitud' && <Formulario simulacionData={datosSimulacion} setVista={setVista} />}
         {vista === 'perfil' && token && <Perfil token={token} setVista={setVista} usuarioActual={usuarioData} />}
+        {vista === 'firma-digital' && <FirmaDigital setVista={setVista} />}
       </main>
 
     </div>

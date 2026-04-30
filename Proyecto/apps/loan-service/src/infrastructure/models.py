@@ -12,7 +12,7 @@ class Solicitud(Base):
     # El diagrama marca Solicitud ID como PK y UUID (del usuario) como FK
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     usuario_id = Column(UUID(as_uuid=True), nullable=False, index=True) 
-    fecha = Column(Date, default=datetime.utcnow().date)
+    fecha_solicitud = Column(Date, default=datetime.utcnow)
     estado = Column(String, default="PENDIENTE")
     monto = Column(BigInteger, nullable=False)
     plazo = Column(Integer, nullable=False)
@@ -83,6 +83,6 @@ class CertificadoDeudas(Base):
     __tablename__ = "certificado_deudas"
     solicitud_id = Column(UUID(as_uuid=True), ForeignKey("solicitud.id"), primary_key=True)
     deudas_totales = Column(Integer)
-    carga_financiera = Column(Integer)
+    mora_90_dias = Column(Integer)
     archivo_url = Column(String)
     solicitud = relationship("Solicitud", back_populates="deudas")

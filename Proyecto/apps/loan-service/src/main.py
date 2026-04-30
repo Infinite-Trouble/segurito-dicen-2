@@ -37,20 +37,55 @@ def simular_credito(request: schemas.SimulacionRequest):
 def crear_solicitud(
     solicitud: schemas.SolicitudCreate, 
     db: Session = Depends(get_db),
-    usuario_id: str = Depends(get_current_user_id) # Esto bloquea peticiones sin token válido
+    usuario_id: str = Depends(get_current_user_id)
 ):
-    # 1. Instanciar el modelo de la BD
+    # 1. Crear la solicitud base
     nueva_solicitud = models.Solicitud(
         usuario_id=usuario_id,
         monto=solicitud.monto,
-        plazo=solicitud.plazo
-        # estado y fecha_solicitud se ponen solos por los valores por defecto en models.py
+        plazo=solicitud.plazo,
+        estado="APROBADO"
+    )
+    db.add(nueva_solicitud)
+    db.flush() # Flush para obtener el ID de la solicitud sin hacer commit todavía
+
+    # 2. Crear registros de documentos asociados
+    nuevo_carnet = models.Carnet(
+        solicitud_id=nueva_solicitud.id,
+        nombre=solicitud.carnet.nombre,
+        rut=solicitud.carnet.rut,
+        numero_cedula=solicitud.carnet.numero_cedula,
+        vigencia=solicitud.carnet.vigencia,
+        archivo_url=solicitud.carnet.archivo_url
+    )
+    
+    nueva_liquidacion = models.CertificadoLiquidacion(
+        solicitud_id=nueva_solicitud.id,
+        total_haberes=solicitud.liquidacion.total_haberes,
+        total_descuento=solicitud.liquidacion.total_descuento,
+        sueldo_liquido=solicitud.liquidacion.sueldo_liquido,
+        archivo_url=solicitud.liquidacion.archivo_url
     )
 
-    # 2. Guardar en la base de datos
-    db.add(nueva_solicitud)
+    nuevas_cotizaciones = models.CertificadoCotizaciones(
+        solicitud_id=nueva_solicitud.id,
+        meses_cotizados_consecutivos=solicitud.cotizaciones.meses_cotizados_consecutivos,
+        rut_empleador=solicitud.cotizaciones.rut_empleador,
+        archivo_url=solicitud.cotizaciones.archivo_url
+    )
+
+    nuevas_deudas = models.CertificadoDeudas(
+        solicitud_id=nueva_solicitud.id,
+        deudas_totales=solicitud.deudas.deudas_totales,
+        mora_90_dias=solicitud.deudas.mora_90_dias,
+        archivo_url=solicitud.deudas.archivo_url
+    )
+
+    db.add_all([nuevo_carnet, nueva_liquidacion, nuevas_cotizaciones, nuevas_deudas])
+    
+    # 3. Confirmar cambios
     db.commit()
-    db.refresh(nueva_solicitud) # Para obtener el ID generado
+    db.refresh(nueva_solicitud)
 
     return nueva_solicitud
 

@@ -3,7 +3,7 @@ from jose import jwt
 
 SECRET_KEY = "PCt7wo4!"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 horas para desarrollo
 
 def create_access_token(data: dict):
     """
