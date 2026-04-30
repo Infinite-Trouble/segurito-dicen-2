@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from logic.calculator import calcular_prestamo, calcular_probabilidad, generar_sugerencias_inteligentes
-from dependencies import get_current_user_id
+from dependencies import get_current_user_id, get_current_user_email
 from sqlalchemy.orm import Session
 from infrastructure import database, models
 import schemas
+from infrastructure.notifications import enviar_correo_cambio_estado
 
 app = FastAPI(title="Loan Service", description="Servicio de simulaciones financieras")
 
@@ -36,23 +37,34 @@ def simular_credito(request: schemas.SimulacionRequest):
 @app.post("/solicitud", response_model=schemas.SolicitudResponse)
 def crear_solicitud(
     solicitud: schemas.SolicitudCreate, 
+    background_tasks: BackgroundTasks, # NUEVO: Herramienta para tareas asíncronas
     db: Session = Depends(get_db),
-    usuario_id: str = Depends(get_current_user_id) # Esto bloquea peticiones sin token válido
+    usuario_id: str = Depends(get_current_user_id),
+    email: str = Depends(get_current_user_email) # NUEVO: Obtenemos el email
 ):
     # 1. Instanciar el modelo de la BD
     nueva_solicitud = models.Solicitud(
         usuario_id=usuario_id,
         monto=solicitud.monto,
         plazo=solicitud.plazo
-        # estado y fecha_solicitud se ponen solos por los valores por defecto en models.py
     )
 
     # 2. Guardar en la base de datos
     db.add(nueva_solicitud)
     db.commit()
-    db.refresh(nueva_solicitud) # Para obtener el ID generado
+    db.refresh(nueva_solicitud) 
+
+    # 3. NUEVO: Disparar el correo asíncrono en segundo plano
+    background_tasks.add_task(
+        enviar_correo_cambio_estado,
+        correo_destino=email,
+        monto=solicitud.monto,
+        plazo=solicitud.plazo,
+        nuevo_estado="Pendiente"
+    )
 
     return nueva_solicitud
+
 
 @app.get("/datos")
 def obtener_datos_usuario(
