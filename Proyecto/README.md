@@ -7,6 +7,7 @@ Proyecto fintech de gestión de préstamos (consumo) con arquitectura en microse
 - `apps/user-service`: Servicio de gestión de usuarios (registro, login, perfil) con FastAPI, SQLAlchemy, PostgreSQL, JWT, Bcrypt.
 - `apps/loan-service`: Servicio de simulación de préstamos (cálculo de cuota/tasa/total/CAE) con FastAPI.
 - `apps/frontend`: SPA React (Vite) que consume ambos servicios.
+- `apps/scan-service`: Servicio de OCR para gestionar la subida de documentos. En el fondo es un puro endpoint analyze. El problema es que funciona con la API de google cloud vision, entonces usted debe hacer un esfuerzo considerable por conseguir una llave JSON que le permita correr este servicio.
 - `docker-compose.yml`: despliega PostgreSQL (`db`) para microservicios.
 
 Diseño clave:
@@ -22,6 +23,8 @@ Diseño clave:
 - Python 3.12+.
 - Node.js 20+ y npm (o pnpm/yarn).
 - `curl` / Postman para pruebas.
+- Cuenta de google cloud con llave de API para cloud vision habilitada
+- Archivo de credenciales JSON que conecta con el servicio de google cloud
 
 ## 3. Clonar repo
 
@@ -36,6 +39,11 @@ cd Proyecto/
 
 ```bash
 docker compose up -d
+```
+En caso de que usted ya tenga levantado el proyecto tiene que hacer:
+
+```bash
+docker compose down -v && docker compose up -d
 ```
 
 - Usuario: `user_admin`
@@ -78,6 +86,16 @@ pip install --upgrade pip
 pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt
 ```
 
+### 5.3. scan-service
+
+```bash
+cd ../../apps/scan-service
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install fastapi uvicorn google-cloud-vision python-dotenv python-multipart pydantic
+```
+
 ## 6. Dependencias frontend
 
 ```bash
@@ -88,8 +106,10 @@ npm install
 ## 7. Inicializar tablas SQL
 
 El proyecto no incluye migraciones automáticas, por eso debes crear las tablas manualmente la primera vez.
+Esto quedó obsoleto, ahora cuando se ejecuta docker compose up -d se inicializan de forma inmediata las tablas. Lo dejaré por honor al trabajo ajeno.
 
 ### 7.1. user-service
+
 
 ```bash
 cd apps/user-service
@@ -138,7 +158,27 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8001
 
 - Docs: `http://localhost:8001/docs`
 
-### 8.3. frontend
+
+### 8.3. scan-service
+
+En .env usted debe reemplazar:
+```bash
+GOOGLE_APPLICATION_CREDENTIALS="$HOME/Desktop/test-agent/credentials/vis.json"
+```
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS="tu/ruta/a/la/credencial/JSON/de/google"
+```
+
+```bash
+cd apps/scan-service
+source venv/bin/activate
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8002
+```
+
+- Docs: `http://localhost:8002/docs`
+
+### 8.4. frontend
 
 ```bash
 cd apps/frontend
@@ -175,10 +215,24 @@ curl -X POST http://localhost:8001/simular \
   -d '{"monto":1000000,"cuotas":12}'
 ```
 
+
+### 9.3. scan-service
+
+- `POST /analyze`
+
+Ejemplo (requiere que tengas una foto en la carpeta scan-service para hacer la prueba; los tipos de documento son carnet, liquidacion, cotizaciones, deuda):
+
+```bash
+curl -X POST http://localhost:8002/analyze \
+-F "file=@test_carnet3.jpeg" \
+-F "document_type=carnet"
+```
+
 ## 10. Esquema de microservicios y diseño
 
 - Bounded context `user-service`: identidad/seguridad/usuarios.
 - Bounded context `loan-service`: cálculos financieros sin persistencia actual.
+- Bounded context `scan-service`: hacer la extracción de información de documentos.
 - `frontend`: UI desacoplada consumiendo APIs.
 - `docker-compose.yml`: dependencia infra (`db`) con persistencia en volumen.
 
@@ -208,6 +262,13 @@ cd apps/user-service && python -m venv .venv && source .venv/bin/activate && pip
 # loan-service
 cd apps/loan-service && python -m venv .venv && source .venv/bin/activate && pip install fastapi uvicorn pydantic && uvicorn src.main:app --reload --port 8001
 
+# scan-service
+cd apps/scan-service && python3 -m venv venv && source venv/bin/activate && pip install fastapi uvicorn google-cloud-vision python-dotenv python-multipart pydantic && uvicorn src.main:app --reload --port 8002
+
 # frontend
 cd apps/frontend && npm install && npm run dev
 ```
+
+## 13. Adicional
+En la carpeta scan-service existe la carpeta PoC. 
+Ahí se realizan las pruebas de concepto para ver cómo funciona la API de google cloud vision. Esto sirve para hacer modificaciones parciales y pruebas sin necesidad de hacer cambios en la plataforma, lo que permite hacer ajustes de desarrollo más rápido.

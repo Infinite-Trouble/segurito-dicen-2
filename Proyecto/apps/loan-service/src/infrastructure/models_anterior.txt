@@ -1,0 +1,29 @@
+import uuid
+from sqlalchemy import Column, String, Integer, Date, DateTime, BigInteger, ForeignKey, Boolean
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import declarative_base
+from datetime import datetime
+
+Base = declarative_base()
+
+class Solicitud(Base):
+    __tablename__ = "solicitud"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(String, nullable=False, index=True) # UUID que viene del Token
+    fecha_solicitud = Column(DateTime, default=datetime.utcnow)
+    estado = Column(String, default="PENDIENTE") # PENDIENTE, APROBADA, RECHAZADA
+    monto = Column(BigInteger, nullable=False) 
+    plazo = Column(Integer, nullable=False)       # Meses
+
+class Prestamo(Base):
+    __tablename__ = "prestamo"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(String, nullable=False, index=True)
+    estado = Column(String, default="ACTIVO")     # ACTIVO, FINALIZADO, MOROSO
+    cuotas_totales = Column(Integer, nullable=False)
+    cuotas_pagadas = Column(Integer, default=0)
+    valor_cuota = Column(BigInteger, nullable=False)
+    monto_total = Column(BigInteger, nullable=False)
+    fecha_proximo_pago = Column(Date)
