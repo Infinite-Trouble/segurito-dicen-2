@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from logic.calculator import calcular_prestamo, calcular_probabilidad, generar_sugerencias_inteligentes
+from logic.scoring import evaluar_solicitud
 from dependencies import get_current_user_id, get_current_user_email
 from sqlalchemy.orm import Session
 from infrastructure import database, models
-import schemas
 from infrastructure.notifications import enviar_correo_cambio_estado
+from datetime import date, timedelta
+import schemas
 
 app = FastAPI(title="Loan Service", description="Servicio de simulaciones financieras")
 
@@ -42,17 +44,33 @@ def crear_solicitud(
     usuario_id: str = Depends(get_current_user_id),
     email: str = Depends(get_current_user_email)
 ):
-    # 1. Crear la solicitud base
+    # 1. Calcular la cuota estimada para el monto y plazo solicitados
+    datos_prestamo = calcular_prestamo(solicitud.monto, solicitud.plazo)
+    cuota_estimada = datos_prestamo["cuota_mensual"]
+
+    # 2. Pasar los datos extraídos por el OCR al motor de Scoring
+    # Nota: Como el schema actual no tiene 'tipo_contrato', usamos "Indefinido" por defecto.
+    # En el futuro puedes agregarlo a tu SolicitudCreate.
+    resultado_evaluacion = evaluar_solicitud(
+        ingreso_liquido=solicitud.liquidacion.sueldo_liquido,
+        deudas_actuales=solicitud.deudas.deudas_totales,
+        cuota_prestamo=cuota_estimada,
+        tipo_contrato="Indefinido" 
+    )
+
+    estado_final = resultado_evaluacion["estado"] # "APROBADA" o "RECHAZADA"
+
+    # 3. Crear la solicitud base con el estado real evaluado
     nueva_solicitud = models.Solicitud(
         usuario_id=usuario_id,
         monto=solicitud.monto,
         plazo=solicitud.plazo,
-        estado="APROBADO"
+        estado=estado_final 
     )
     db.add(nueva_solicitud)
-    db.flush() # Flush para obtener el ID de la solicitud sin hacer commit todavía
+    db.flush() # Mantiene el ID disponible para los documentos y el préstamo
 
-    # 2. Crear registros de documentos asociados
+    # 4. Crear registros de documentos asociados (Se guardan sin importar si se aprobó o no)
     nuevo_carnet = models.Carnet(
         solicitud_id=nueva_solicitud.id,
         nombre=solicitud.carnet.nombre,
@@ -86,17 +104,48 @@ def crear_solicitud(
 
     db.add_all([nuevo_carnet, nueva_liquidacion, nuevas_cotizaciones, nuevas_deudas])
     
-    # 3. Confirmar cambios
+    # 5. Lógica de Negocio: Generar el Préstamo SOLO si la solicitud fue aprobada
+    if resultado_evaluacion["aprobado"]:
+        nuevo_prestamo = models.Prestamo(
+            solicitud_id=nueva_solicitud.id,
+            monto_total=int(datos_prestamo["total_pagar"]), # Casteamos a int porque en la BD es BigInteger
+            cuotas_faltantes=solicitud.plazo,
+            estado="ACTIVO"
+        )
+        db.add(nuevo_prestamo)
+        db.flush() # ¡Clave! Genera el ID del préstamo para poder usarlo en las cuotas
+
+        # --- NUEVO: Generación de la tabla de desarrollo (Cuotas) ---
+        cuotas_a_crear = []
+        fecha_actual = date.today()
+
+        for i in range(1, solicitud.plazo + 1):
+            # Sumamos aprox 30 días para cada vencimiento de cuota
+            fecha_vencimiento = fecha_actual + timedelta(days=30 * i)
+            
+            nueva_cuota = models.Cuota(
+                prestamo_id=nuevo_prestamo.id,
+                monto=int(cuota_estimada), # Casteamos a int (sin decimales para CLP)
+                fecha_limite=fecha_vencimiento,
+                estado="PENDIENTE"
+                # fecha_pago y comprobante_pago quedan nulos por defecto, lo cual es correcto
+            )
+            cuotas_a_crear.append(nueva_cuota)
+        
+        # Agregamos todas las cuotas de golpe a la base de datos para mayor rendimiento
+        db.add_all(cuotas_a_crear)
+
+    # 6. Confirmar la transacción completa en la base de datos
     db.commit()
     db.refresh(nueva_solicitud)
 
-    # 4. Disparar el correo asíncrono en segundo plano
+    # 7. Disparar el correo asíncrono con el estado real
     background_tasks.add_task(
         enviar_correo_cambio_estado,
         correo_destino=email,
         monto=solicitud.monto,
         plazo=solicitud.plazo,
-        nuevo_estado="Aprobado"
+        nuevo_estado=estado_final
     )
 
     return nueva_solicitud
