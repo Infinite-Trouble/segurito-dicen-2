@@ -5,7 +5,7 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install google-cloud-vision
 
-hay que configurar la llave, que es un weveo así que aquí dejo las instrucciones que me sirvieron a mi:
+Pasos para configuración de API key.
 
 1. Crear la Cuenta de Servicio y asignar permisos
 En la Consola de Google Cloud, ve a IAM y administración > Cuentas de servicio.
