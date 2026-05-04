@@ -209,3 +209,6 @@ __marimo__/
 
 # Lo que se sube a la carpeta uploads es irrelevante
 **/uploads/*
+
+# Carpeta de datos de entrada para scan service
+**/documents*
