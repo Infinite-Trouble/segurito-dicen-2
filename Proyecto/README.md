@@ -73,7 +73,7 @@ python -m venv .venv
 source .venv/bin/activate   # WSL/macOS
 # .venv\Scripts\activate  # Windows PowerShell
 pip install --upgrade pip
-pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt pydantic[email]
+pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt pydantic[email] python-dotenv
 ```
 
 ### 5.2. loan-service
@@ -83,7 +83,7 @@ cd ../../apps/loan-service
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt
+pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt python-dotenv
 ```
 
 ### 5.3. scan-service
