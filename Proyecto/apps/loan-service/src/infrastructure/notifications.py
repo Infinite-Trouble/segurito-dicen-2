@@ -2,9 +2,14 @@ import smtplib
 import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 
-GMAIL_SENDER = "proyectoprestamo06@gmail.com"
-GMAIL_APP_PASSWORD = "warh qojp jdar pjgi"
+# Carga las variables del archivo .env al sistema
+load_dotenv()
+
+GMAIL_SENDER = os.getenv("GMAIL_SENDER")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+
 def enviar_correo_cambio_estado(correo_destino: str, monto: int, plazo: int, nuevo_estado: str = "Pendiente"):
     """
     Envía un correo electrónico asíncrono sobre el estado de la solicitud vía Gmail SMTP.
