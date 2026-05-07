@@ -46,8 +46,6 @@ En caso de que usted ya tenga levantado el proyecto tiene que hacer:
 docker compose down -v && docker compose up -d
 ```
 
-- Usuario: `user_admin`
-- Password: `PCt7wo4!`
 - Bases: `users_db` (creada por defecto) y `loans_db` (creada por script SQL en `db-init/`).
 - Puerto: `5432:5432`
 
@@ -161,10 +159,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8001
 
 ### 8.3. scan-service
 
-En .env usted debe reemplazar:
-```bash
-GOOGLE_APPLICATION_CREDENTIALS="$HOME/Desktop/test-agent/credentials/vis.json"
-```
+Usted debe crear un archivo .env en la carpeta en el cual debe poner.
 
 ```bash
 GOOGLE_APPLICATION_CREDENTIALS="tu/ruta/a/la/credencial/JSON/de/google"
