@@ -1,0 +1,11 @@
+1. haga un entorno virtual y corralo
+python3 -m venv venv
+source venv/bin/activate
+
+2. instale dependencias
+
+pip install fastapi httpx python-jose dotenv sqlalchemy psycopg2
+
+3. corra lo siguiente desde Proyecto:
+
+PYTHONPATH=apps/loan-service/src python3 -m unittest tests.test_prestamo_inteligente -v
