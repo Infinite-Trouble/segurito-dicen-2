@@ -101,39 +101,9 @@ cd ../../apps/frontend
 npm install
 ```
 
-## 7. Inicializar tablas SQL
-
-El proyecto no incluye migraciones automáticas, por eso debes crear las tablas manualmente la primera vez.
-Esto quedó obsoleto, ahora cuando se ejecuta docker compose up -d se inicializan de forma inmediata las tablas. Lo dejaré por honor al trabajo ajeno.
+## 7. Levantar servicios
 
 ### 7.1. user-service
-
-
-```bash
-cd apps/user-service
-source .venv/bin/activate
-python3 - <<'PY'
-from src.infrastructure.db import models, database
-models.Base.metadata.create_all(bind=database.engine)
-print('Tablas de users_db creadas')
-PY
-```
-
-### 7.2. loan-service (loans_db se crea automáticamente por script SQL)
-
-```bash
-cd apps/loan-service
-source .venv/bin/activate
-python3 - <<'PY'
-from src.infrastructure import models, database
-models.Base.metadata.create_all(bind=database.engine)
-print('Tablas de loans_db creadas')
-PY
-```
-
-## 8. Levantar servicios
-
-### 8.1. user-service
 
 ```bash
 cd apps/user-service
@@ -145,7 +115,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 - Docs interactivos: `http://localhost:8000/docs`
 - Health-check: no hay endpoint explícito, usar `GET http://localhost:8000/docs`
 
-### 8.2. loan-service
+### 7.2. loan-service
 
 ```bash
 cd apps/loan-service
@@ -157,7 +127,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8001
 - Docs: `http://localhost:8001/docs`
 
 
-### 8.3. scan-service
+### 7.3. scan-service
 
 Usted debe crear un archivo .env en la carpeta en el cual debe poner.
 
@@ -173,7 +143,7 @@ uvicorn src.main:app --reload --host 0.0.0.0 --port 8002
 
 - Docs: `http://localhost:8002/docs`
 
-### 8.4. frontend
+### 7.4. frontend
 
 ```bash
 cd apps/frontend
@@ -182,9 +152,9 @@ npm run dev
 
 - App web: `http://localhost:5173`
 
-## 9. Endpoints y pruebas de funcionamiento
+## 8. Endpoints y pruebas de funcionamiento
 
-### 9.1. user-service
+### 8.1. user-service
 
 - `POST /register` (registro)
 - `POST /login` (token JWT)
@@ -198,7 +168,7 @@ curl -X POST http://localhost:8000/register \
   -d '{"rut":"12345678-9","nombre":"Juan","apellido":"Pérez","email":"juan@x.com","password":"Test1234","telefono":"+56912345678"}'
 ```
 
-### 9.2. loan-service
+### 8.2. loan-service
 
 - `POST /simular`
 
@@ -211,7 +181,7 @@ curl -X POST http://localhost:8001/simular \
 ```
 
 
-### 9.3. scan-service
+### 8.3. scan-service
 
 - `POST /analyze`
 
@@ -223,7 +193,7 @@ curl -X POST http://localhost:8002/analyze \
 -F "document_type=carnet"
 ```
 
-## 10. Esquema de microservicios y diseño
+## 9. Esquema de microservicios y diseño
 
 - Bounded context `user-service`: identidad/seguridad/usuarios.
 - Bounded context `loan-service`: cálculos financieros sin persistencia actual.
@@ -231,21 +201,21 @@ curl -X POST http://localhost:8002/analyze \
 - `frontend`: UI desacoplada consumiendo APIs.
 - `docker-compose.yml`: dependencia infra (`db`) con persistencia en volumen.
 
-### 10.1. Separación de capas
+### 9.1. Separación de capas
 
 - `infrastructure`: implementación concreta (base de datos, hashing, JWT, CORS).
 - `logic`/`domain`: reglas de negocio (`calculator`).
 - `schemas`: DTOs de entrada/salida (validación por Pydantic).
 - `main.py`: orquesta rutas y dependencias.
 
-## 11. Troubleshooting común
+## 10. Troubleshooting común
 
 - Si falla conexión a DB: verificar `docker compose ps` y credenciales.
 - Si `db` no arranca: `docker compose down --volumes` y `docker compose up -d` para recrear.
 - Endpoint responde 404: revisar puertos y ruta en `uvicorn`.
 - 500 en `/perfil`: token JWT inválido/expirado.
 
-## 12. Bulk commands para desarrollo rápido
+## 11. Bulk commands para desarrollo rápido
 
 ```bash
 # Desde la raíz
@@ -264,6 +234,6 @@ cd apps/scan-service && python3 -m venv venv && source venv/bin/activate && pip 
 cd apps/frontend && npm install && npm run dev
 ```
 
-## 13. Adicional
+## 12. Adicional
 En la carpeta scan-service existe la carpeta PoC. 
 Ahí se realizan las pruebas de concepto para ver cómo funciona la API de google cloud vision. Esto sirve para hacer modificaciones parciales y pruebas sin necesidad de hacer cambios en la plataforma, lo que permite hacer ajustes de desarrollo más rápido.
