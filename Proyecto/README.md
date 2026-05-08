@@ -105,7 +105,7 @@ npm install
 Para la seguridad del proyecto y su correcto funcionamiento de cada servicio, en necesario crear archivos .env que alamcenan las variables de entorno del proyecto que son claves para su funcionamiento.
 
 ### 7.1. /Proyecto
-Dentro de la carpeta Proyecto se debe crear el siguiente archivo .env
+Dentro de la carpeta `Proyecto` se debe crear el siguiente archivo .env
 
 ```bash
 DB_USER=user_admin
@@ -114,7 +114,7 @@ DB_NAME_USERS=users_db
 ```
 
 ### 7.2. /loan-service
-Dentro de loan-service se debe crear el siguiente archivo .env
+Dentro de `loan-service` se debe crear el siguiente archivo .env
 
 ```bash
 # Base de Datos
@@ -130,7 +130,7 @@ GMAIL_APP_PASSWORD="warh qojp jdar pjgi"
 ```
 
 ### 7.2. /user-service
-Dentro de user-service se debe crear el siguiente archivo .env
+Dentro de `user-service` se debe crear el siguiente archivo .env
 
 ```bash
 # Base de Datos
@@ -143,7 +143,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES="1440"
 ```
 
 ### 7.3. /scan-service
-Dentro de scan-service se debe crear el siguiente archivo .env
+Dentro de `scan-service` se debe crear el siguiente archivo .env
 
 ```bash
 GOOGLE_APPLICATION_CREDENTIALS="{ubicación de archivo con credencial API}"
