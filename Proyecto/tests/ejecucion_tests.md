@@ -1,15 +1,21 @@
 Desde la carpeta Proyecto
 
 1. haga un entorno virtual y corralo
+```bash
 python3 -m venv venv
 source venv/bin/activate
+```
 
 2. instale dependencias
 
+```bash
 pip install fastapi httpx python-jose dotenv sqlalchemy psycopg2 rich pytest fastapi uvicorn google-cloud-vision python-dotenv python-multipart pydantic pymupdf
+```
 
 3. corra lo siguiente desde Proyecto:
 
+```bash
 PYTHONPATH=apps/loan-service/src python3 -m unittest tests.test_prestamo_inteligente -v
 
 PYTHONPATH=apps/scan-service python3 -m unittest tests/test_analyze.py -v
+```
