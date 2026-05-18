@@ -19,6 +19,8 @@ app.add_middleware(
 )
 
 # Crear directorio de uploads si no existe
+# cuando uno corre el test desde proyecto esto crea la carpeta uploads a la misma altura, entonces
+# de preferencia eliminarlo!
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
@@ -51,7 +53,12 @@ async def analyze_document(
             f.write(content)
         
         # 2. Ejecutar OCR
-        raw_text = ocr_engine.detect_text(content)
+        try:
+            raw_text = ocr_engine.detect_text(content)
+        except Exception as ocr_error:
+            # si cloud vision falla porque le están mandando un archivo corrupto, dejamos texto vacío no más
+            print(f"Error de cloud vision al procesar el archivo. Detalle: {ocr_error}")
+            raw_text=None
         
         if not raw_text:
             raise HTTPException(status_code=400, detail="No se pudo detectar texto en el documento.")
@@ -81,6 +88,11 @@ async def analyze_document(
             "archivo_url": archivo_url,
             "raw_text": raw_text
         }
+    
+    except HTTPException as http_ex:
+        # si se capturó un problema con cloud vision, que lo muestre
+        raise http_ex
 
     except Exception as e:
+        # si llegamos aquí no se manejaron bien los errores y hay "error interno del servidor"
         raise HTTPException(status_code=500, detail=str(e))
