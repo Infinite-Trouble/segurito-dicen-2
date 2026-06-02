@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from infrastructure import database, models
 from infrastructure.notifications import enviar_correo_cambio_estado
 from datetime import date, timedelta
+from typing import List
+from transbank.webpay.webpay_plus.transaction import Transaction
+from transbank.common.options import WebpayOptions
+from transbank.common.integration_type import IntegrationType
 import schemas
+import uuid
 
 app = FastAPI(title="Loan Service", description="Servicio de simulaciones financieras")
 
@@ -49,8 +54,6 @@ def crear_solicitud(
     cuota_estimada = datos_prestamo["cuota_mensual"]
 
     # 2. Pasar los datos extraídos por el OCR al motor de Scoring
-    # Nota: Como el schema actual no tiene 'tipo_contrato', usamos "Indefinido" por defecto.
-    # En el futuro puedes agregarlo a tu SolicitudCreate.
     resultado_evaluacion = evaluar_solicitud(
         ingreso_liquido=solicitud.liquidacion.sueldo_liquido,
         deudas_actuales=solicitud.deudas.deudas_totales,
@@ -68,9 +71,9 @@ def crear_solicitud(
         estado=estado_final 
     )
     db.add(nueva_solicitud)
-    db.flush() # Mantiene el ID disponible para los documentos y el préstamo
+    db.flush() 
 
-    # 4. Crear registros de documentos asociados (Se guardan sin importar si se aprobó o no)
+    # 4. Crear registros de documentos asociados
     nuevo_carnet = models.Carnet(
         solicitud_id=nueva_solicitud.id,
         nombre=solicitud.carnet.nombre,
@@ -108,31 +111,27 @@ def crear_solicitud(
     if resultado_evaluacion["aprobado"]:
         nuevo_prestamo = models.Prestamo(
             solicitud_id=nueva_solicitud.id,
-            monto_total=int(datos_prestamo["total_pagar"]), # Casteamos a int porque en la BD es BigInteger
+            monto_total=int(datos_prestamo["total_pagar"]), 
             cuotas_faltantes=solicitud.plazo,
             estado="ACTIVO"
         )
         db.add(nuevo_prestamo)
-        db.flush() # ¡Clave! Genera el ID del préstamo para poder usarlo en las cuotas
+        db.flush() 
 
-        # --- NUEVO: Generación de la tabla de desarrollo (Cuotas) ---
         cuotas_a_crear = []
         fecha_actual = date.today()
 
         for i in range(1, solicitud.plazo + 1):
-            # Sumamos aprox 30 días para cada vencimiento de cuota
             fecha_vencimiento = fecha_actual + timedelta(days=30 * i)
             
             nueva_cuota = models.Cuota(
                 prestamo_id=nuevo_prestamo.id,
-                monto=int(cuota_estimada), # Casteamos a int (sin decimales para CLP)
+                monto=int(cuota_estimada),
                 fecha_limite=fecha_vencimiento,
                 estado="PENDIENTE"
-                # fecha_pago y comprobante_pago quedan nulos por defecto, lo cual es correcto
             )
             cuotas_a_crear.append(nueva_cuota)
         
-        # Agregamos todas las cuotas de golpe a la base de datos para mayor rendimiento
         db.add_all(cuotas_a_crear)
 
     # 6. Confirmar la transacción completa en la base de datos
@@ -156,20 +155,166 @@ def obtener_datos_usuario(
     db: Session = Depends(get_db),
     usuario_id: str = Depends(get_current_user_id)
 ):
-    # Buscamos en la base de datos filtrando por el ID del usuario
     solicitudes = db.query(models.Solicitud).filter(models.Solicitud.usuario_id == usuario_id).all()
     
-    # Para obtener los préstamos, debemos unir con la tabla Solicitud
-    prestamos = db.query(models.Prestamo)\
+    prestamos_raw = db.query(models.Prestamo)\
         .join(models.Solicitud)\
         .filter(models.Solicitud.usuario_id == usuario_id)\
         .all()
     
-    # Retornamos exactamente la estructura que espera tu Dashboard.jsx
+    prestamos_procesados = []
+    for p in prestamos_raw:
+        cuotas_totales = len(p.cuotas)
+        cuotas_pagadas = sum(1 for c in p.cuotas if c.estado == "PAGADO")
+        
+        proxima_cuota = next((c for c in p.cuotas if c.estado == "PENDIENTE"), None)
+        
+        valor_cuota = proxima_cuota.monto if proxima_cuota else (p.cuotas[0].monto if p.cuotas else 0)
+        fecha_proximo_pago = proxima_cuota.fecha_limite if proxima_cuota else None
+
+        prestamos_procesados.append({
+            "id": p.id,
+            "monto_total": p.monto_total,
+            "estado": p.estado,
+            "cuotas_totales": cuotas_totales,
+            "cuotas_pagadas": cuotas_pagadas,
+            "valor_cuota": valor_cuota,
+            "fecha_proximo_pago": fecha_proximo_pago
+        })
+    
     return {
         "solicitudes": solicitudes,
-        "prestamos": prestamos
+        "prestamos": prestamos_procesados
     }
+
+
+@app.get("/prestamos/{prestamo_id}/cuotas", response_model=List[schemas.CuotaResponse])
+def obtener_cuotas_prestamo(
+    prestamo_id: str,
+    db: Session = Depends(get_db),
+    usuario_id: str = Depends(get_current_user_id)
+):
+    """Retorna las cuotas de desarrollo de un crédito verificado por usuario"""
+    prestamo = db.query(models.Prestamo).join(models.Solicitud).filter(
+        models.Prestamo.id == prestamo_id,
+        models.Solicitud.usuario_id == usuario_id
+    ).first()
+
+    if not prestamo:
+        raise HTTPException(status_code=404, detail="Préstamo inexistente o cuenta inválida.")
+    
+    return sorted(prestamo.cuotas, key=lambda x: x.id)
+
+
+#===========================================================================
+# FLUJO DE PAGOS: WEBPAY PLUS (TRANSBANK) 
+#===========================================================================
+
+@app.post("/prestamos/{prestamo_id}/iniciar-pago")
+def iniciar_pago_webpay(
+    prestamo_id: str,
+    pago_data: schemas.PagoRequest,
+    db: Session = Depends(get_db),
+    usuario_id: str = Depends(get_current_user_id)
+):
+    # Genera el token de Webpay Plus y retorna la URL de redirección.
+    prestamo = db.query(models.Prestamo).filter(
+        models.Prestamo.id == prestamo_id,
+        models.Prestamo.solicitud.has(usuario_id=usuario_id)
+    ).first()
+
+    if not prestamo:
+        raise HTTPException(status_code=404, detail="Préstamo no encontrado.")
+
+    cuotas = db.query(models.Cuota).filter(models.Cuota.id.in_(pago_data.cuota_ids)).all()
+    if not cuotas:
+        raise HTTPException(status_code=400, detail="No se enviaron cuotas válidas.")
+
+    monto_total = sum(c.monto for c in cuotas)
+    
+    buy_order = f"ORDEN-{prestamo_id[:6]}-{str(uuid.uuid4())[:4]}"
+    session_id = f"SESION-{usuario_id[:8]}"
+    
+    cuotas_str = ",".join(map(str, pago_data.cuota_ids))
+    return_url = f"http://localhost:5173/?cuotas={cuotas_str}&prestamo={prestamo_id}"
+
+    try:
+        opciones = WebpayOptions(
+            "597055555532", 
+            "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C", 
+            IntegrationType.TEST
+        )
+        tx = Transaction(opciones)
+        response = tx.create(buy_order, session_id, monto_total, return_url)
+        url_transbank = f"{response['url']}?token_ws={response['token']}"
+        
+        return {"url_redireccion": url_transbank}
+
+    except Exception as e:
+        print("Error conectando con Transbank:", e)
+        raise HTTPException(status_code=502, detail="Error de comunicación con Transbank.")
+
+
+@app.post("/prestamos/confirmar-pago")
+def confirmar_pago_webpay(
+    datos_retorno: dict, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    # Transbank devuelve el token. Lo confirmamos y aprobamos el pago.
+    token_ws = datos_retorno.get("token_ws")
+    if not token_ws:
+        raise HTTPException(status_code=400, detail="Transacción sin token válido.")
+
+    try:
+        opciones = WebpayOptions(
+            "597055555532", 
+            "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C", 
+            IntegrationType.TEST
+        )
+        tx = Transaction(opciones)
+        response = tx.commit(token_ws)
+        
+        if response.get("status") != "AUTHORIZED" or response.get("response_code") != 0:
+            raise HTTPException(status_code=402, detail="El pago fue rechazado por el banco.")
+            
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error confirmando pago en Transbank: {str(e)}")
+
+    prestamo_id = datos_retorno.get("prestamo")
+    cuotas_ids = [int(id) for id in datos_retorno.get("cuotas").split(",")]
+
+    prestamo = db.query(models.Prestamo).filter(models.Prestamo.id == prestamo_id).first()
+    cuotas = db.query(models.Cuota).filter(models.Cuota.id.in_(cuotas_ids)).all()
+
+    monto_total = sum(c.monto for c in cuotas)
+
+    for cuota in cuotas:
+        cuota.estado = "PAGADO"
+        cuota.fecha_pago = date.today()
+        cuota.comprobante_pago = f"WEBPAY-AUTH-{response.get('authorization_code', 'N/A')}"
+
+    cuotas_restantes = db.query(models.Cuota).filter(
+        models.Cuota.prestamo_id == prestamo_id,
+        models.Cuota.estado == "PENDIENTE"
+    ).count()
+    
+    prestamo.cuotas_faltantes = cuotas_restantes
+    if cuotas_restantes == 0:
+        prestamo.estado = "PAGADO"
+    
+    db.commit()
+
+    return {
+        "mensaje": "Pago registrado", 
+        "monto": monto_total, 
+        "auth_code": response.get('authorization_code')
+    }
+
+
+# =========================================================================
+# EVALUACIÓN DE RIESGO
+# =========================================================================
 
 @app.post("/probabilidad", response_model=schemas.ProbabilidadResponse)
 def endpoint_probabilidad(request: schemas.ProbabilidadRequest):
@@ -186,13 +331,10 @@ def endpoint_probabilidad(request: schemas.ProbabilidadRequest):
 @app.post("/sugerencias", response_model=schemas.SugerenciasResponse)
 def endpoint_sugerencias(request: schemas.DatosSocioeconomicos):
     """Genera inteligentemente las 3 mejores opciones procesadas"""
-    try:
-        opciones = generar_sugerencias_inteligentes(
-            ingreso=request.ingreso,
-            deuda=request.deuda,
-            factor=request.factor_contrato
-        )
-        return {"opciones": opciones}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    opciones = generar_sugerencias_inteligentes(
+        ingreso=request.ingreso,
+        deuda=request.deuda,
+        factor=request.factor_contrato
+    )
+    return {"opciones": opciones}
 

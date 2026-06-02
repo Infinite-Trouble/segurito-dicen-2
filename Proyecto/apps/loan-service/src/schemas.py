@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import date
 
@@ -12,6 +12,25 @@ class SimulacionResponse(BaseModel):
     tasa_aplicada: float
     total_pagar: float
     cae: float
+
+
+
+
+#---- ESTRUCTURAS DE AUDITORÍA Y PORTAL DE PAGOS ----
+
+
+class CuotaResponse(BaseModel):
+    id: int
+    monto: int
+    fecha_limite: date
+    estado: str
+
+    class Config:
+        from_attributes = True
+
+class PagoRequest(BaseModel):
+    cuota_ids: List[int]
+    metodo_pago: str
 
 # --- ESQUEMAS PARA DOCUMENTOS ---
 
