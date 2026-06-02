@@ -9,7 +9,7 @@ Este es el repositorio del Grupo 06, cuyos integrantes son:
 * Tomas Alberto Molina Ríos - 202304067-3
 * Martin Alessandro Muñoz Vives - 202273100-1
 * Luis Alejandro Soto Mendez - 202304045-2
-* **Tutor**: Alicia Pereira
+* **Tutor**: Agustin Venegas
 
 ## Wiki
 

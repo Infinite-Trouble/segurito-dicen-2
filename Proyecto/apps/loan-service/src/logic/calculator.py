@@ -43,15 +43,22 @@ def calcular_probabilidad(ingreso: float, deuda: float, factor: float, cuota: fl
 def generar_sugerencias_inteligentes(ingreso: float, deuda: float, factor: float) -> list:
     """Calcula todo el batch de sugerencias directamente en el servidor"""
     if ingreso <= 0:
-        return []
+        raise ValueError("El Ingreso no puede ser igual o menor a cero.")
+    if factor <=0:
+        raise ValueError("El factor de contrato no puede ser igual o menor a cero")
 
-    escenarios_a_probar = [
-        {"monto": 5000000, "cuotas": 24},
-        {"monto": 8000000, "cuotas": 36},
-        {"monto": 12000000, "cuotas": 48},
-        {"monto": 15000000, "cuotas": 60},
-        {"monto": 20000000, "cuotas": 60}
-    ]
+    # escenarios_a_probar = [
+    #     {"monto": 5000000, "cuotas": 24},
+    #     {"monto": 8000000, "cuotas": 36},
+    #     {"monto": 12000000, "cuotas": 48},
+    #     {"monto": 15000000, "cuotas": 60},
+    #     {"monto": 20000000, "cuotas": 60}
+    # ]
+
+    escenarios_a_probar = []
+    for i in range(4):
+        caso = {"monto": ingreso*(i+1), "cuotas": 12*(i+1)}
+        escenarios_a_probar.append(caso)
 
     opciones_aprobables = []
 

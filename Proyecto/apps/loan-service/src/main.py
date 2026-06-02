@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, BackgroundTasks
+from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from logic.calculator import calcular_prestamo, calcular_probabilidad, generar_sugerencias_inteligentes
 from logic.scoring import evaluar_solicitud
@@ -186,9 +186,13 @@ def endpoint_probabilidad(request: schemas.ProbabilidadRequest):
 @app.post("/sugerencias", response_model=schemas.SugerenciasResponse)
 def endpoint_sugerencias(request: schemas.DatosSocioeconomicos):
     """Genera inteligentemente las 3 mejores opciones procesadas"""
-    opciones = generar_sugerencias_inteligentes(
-        ingreso=request.ingreso,
-        deuda=request.deuda,
-        factor=request.factor_contrato
-    )
-    return {"opciones": opciones}
+    try:
+        opciones = generar_sugerencias_inteligentes(
+            ingreso=request.ingreso,
+            deuda=request.deuda,
+            factor=request.factor_contrato
+        )
+        return {"opciones": opciones}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

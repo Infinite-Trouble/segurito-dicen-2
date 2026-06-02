@@ -52,13 +52,16 @@ async def analyze_document(
         with open(file_path, "wb") as f:
             f.write(content)
         
-        # 2. Ejecutar OCR
+        # 2. Ejecutar OCR de forma segura
         try:
             raw_text = ocr_engine.detect_text(content)
         except Exception as ocr_error:
-            # si cloud vision falla porque le están mandando un archivo corrupto, dejamos texto vacío no más
+            # Si cloud vision falla (ej: archivo corrupto), lanzamos un 400 controlado
             print(f"Error de cloud vision al procesar el archivo. Detalle: {ocr_error}")
-            raw_text=None
+            raise HTTPException(
+                status_code=400, 
+                detail="El archivo proporcionado está corrupto o no es un formato de imagen legible."
+            )
         
         if not raw_text:
             raise HTTPException(status_code=400, detail="No se pudo detectar texto en el documento.")
@@ -88,11 +91,10 @@ async def analyze_document(
             "archivo_url": archivo_url,
             "raw_text": raw_text
         }
-    
-    except HTTPException as http_ex:
-        # si se capturó un problema con cloud vision, que lo muestre
-        raise http_ex
 
+    except HTTPException:
+        # Si el error es un HTTPException (400, 422) que nosotros lanzamos intencionalmente, lo dejamos pasar
+        raise 
     except Exception as e:
-        # si llegamos aquí no se manejaron bien los errores y hay "error interno del servidor"
-        raise HTTPException(status_code=500, detail=str(e))
+        # Solo si es un error verdaderamente inesperado, lanzamos 500
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
