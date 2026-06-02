@@ -151,6 +151,74 @@ const Dashboard = ({ token, setVista }) => {
     return new Date(dateString).toLocaleDateString('es-CL', options);
   };
 
+  const descargarContrato = (solicitud) => {
+    const datosGuardados = JSON.parse(localStorage.getItem('datos_firma')) || {};
+
+    const form = datosGuardados.formData || {};
+    const simulacion = datosGuardados.simulacionData || {};
+    const carnet = datosGuardados.carnet || {};
+    const liquidacion = datosGuardados.liquidacion || {};
+    const cotizaciones = datosGuardados.cotizaciones || {};
+    const deudas = datosGuardados.deudas || {};
+
+    const fecha = new Date();
+    const fechaTexto = fecha.toLocaleDateString('es-CL');
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text('CONTRATO DE PRÉSTAMO PERSONAL', 105, 20, { align: 'center' });
+
+    doc.setFontSize(11);
+
+    const textoContrato = `
+  En Valparaíso, Chile, con fecha ${fechaTexto}.
+
+  REUNIDOS
+
+  De una parte, Sistema de Préstamos Online, en adelante denominado "el Banco".
+
+  Y de otra parte, ${form.nombreCompleto || carnet.nombre || 'CLIENTE'}, con RUT ${form.rut || carnet.rut || 'NO INFORMADO'} y correo electrónico ${form.correo || 'NO INFORMADO'}, en adelante denominado "el Prestatario".
+
+  CLÁUSULAS
+
+  PRIMERA. OBJETO Y MONTO DEL PRÉSTAMO
+  El Banco concede al Prestatario un préstamo por un monto total de $${simulacion.monto || solicitud.monto || 'NO INFORMADO'} CLP.
+
+  SEGUNDA. PLAZO DE AMORTIZACIÓN
+  El plazo de devolución será de ${simulacion.cuotas || simulacion.plazo || solicitud.plazo || 'NO INFORMADO'} meses.
+
+  TERCERA. CUOTAS DE AMORTIZACIÓN
+  El préstamo será pagado mediante cuotas mensuales. El valor aproximado de cada cuota será de $${simulacion.cuota_mensual || 'NO INFORMADO'} CLP.
+
+  CUARTA. VALIDACIÓN DE DOCUMENTOS
+  El Prestatario declara haber entregado y confirmado la información contenida en los siguientes documentos:
+  - Cédula de identidad.
+  - Última liquidación de sueldo.
+  - Certificado de cotizaciones.
+  - Certificado de deudas.
+
+  QUINTA. ANTECEDENTES FINANCIEROS
+  Sueldo informado: $${liquidacion.sueldo_liquido || liquidacion.sueldo || 'NO INFORMADO'} CLP.
+  Cotizaciones confirmadas: ${cotizaciones.confirmado ? 'Sí' : 'No'}.
+  Deudas confirmadas: ${deudas.confirmado ? 'Sí' : 'No'}.
+
+  SEXTA. FIRMA DIGITAL
+  El Prestatario valida su identidad mediante captura facial y firma digital en la plataforma.
+
+  Y en prueba de conformidad, firma digitalmente el presente contrato.
+  `;
+
+    const lineas = doc.splitTextToSize(textoContrato, 180);
+    doc.text(lineas, 15, 35);
+
+    doc.text('Firma del Prestatario:', 15, 250);
+    doc.text('Pendiente de firma', 15, 265);
+    doc.text('Firma del Banco: Sistema de Préstamos Online', 110, 250);
+
+    doc.save('contrato-prestamo-borrador.pdf');
+  }; //final de agregado
+
   const renderEstadoSolicitud = (estado) => {
     const est = estado?.toUpperCase();
     if (est === 'APROBADA' || est === 'APROBADO') {
@@ -350,7 +418,10 @@ const Dashboard = ({ token, setVista }) => {
                       <td className="px-6 py-5">{renderEstadoSolicitud(s.estado)}</td>
                       <td className="px-6 py-5">
                         {s.estado?.toUpperCase() === 'APROBADA' ? (
-                          <button className="px-4 py-2 bg-[#00346f] text-white text-xs font-bold rounded-lg hover:bg-blue-900 flex items-center gap-1">
+                          <button
+                            onClick={() => descargarContrato(s)}
+                            className="px-4 py-2 bg-[#00346f] text-white text-xs font-bold rounded-lg hover:bg-blue-900 flex items-center gap-1"
+                          >
                             <span className="material-symbols-outlined text-sm">download</span> Descargar
                           </button>
                         ) : <span className="text-xs text-slate-400">No disponible</span>}
