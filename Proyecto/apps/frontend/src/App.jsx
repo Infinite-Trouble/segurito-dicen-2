@@ -11,7 +11,7 @@ function App() {
   const [vista, setVista] = useState('inicio');
   const [token, setToken] = useState(localStorage.getItem('token') || sessionStorage.getItem('token'));
   const [datosSimulacion, setDatosSimulacion] = useState(null);
-
+  
   const [usuarioData, setUsuarioData] = useState(() => {
     const saved = localStorage.getItem('user_info') || sessionStorage.getItem('user_info');
     return saved ? JSON.parse(saved) : null;
@@ -21,6 +21,19 @@ function App() {
     rut: '', nombre: '', apellido: '', email: '', password: '', 
     telefono: '', recordarme: false 
   });
+
+  
+  // ============= INTERCEPTOR DE RETORNO DE TRANSBANK ===============
+  useEffect(() => {
+    // Se lee la barra de direcciones del navegador apenas carga la app
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // se fuerza a que la vista aterrice directamente en el Dashboard si url trae token de webpay
+    if (urlParams.get('token_ws') || urlParams.get('TBK_TOKEN')) {
+      setVista('dashboard'); 
+    }
+  }, []);
+  // =========================================================
 
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
