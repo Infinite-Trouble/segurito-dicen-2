@@ -14,10 +14,7 @@ class SimulacionResponse(BaseModel):
     cae: float
 
 
-
-
 #---- ESTRUCTURAS DE AUDITORÍA Y PORTAL DE PAGOS ----
-
 
 class CuotaResponse(BaseModel):
     id: int
