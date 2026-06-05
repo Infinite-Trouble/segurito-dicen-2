@@ -81,7 +81,7 @@ cd ../../apps/loan-service
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt python-dotenv
+pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt python-dotenv transbank-sdk
 ```
 
 ### 5.3. scan-service
@@ -91,7 +91,7 @@ cd ../../apps/scan-service
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
-pip install fastapi uvicorn google-cloud-vision python-dotenv python-multipart pydantic pymupdf
+pip install fastapi uvicorn google-cloud-vision python-dotenv python-multipart pydantic pymupdf python-jose pyjwt
 ```
 
 ## 6. Dependencias frontend
