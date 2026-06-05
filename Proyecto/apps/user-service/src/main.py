@@ -9,11 +9,15 @@ from infrastructure.auth.hash_handler import hash_password
 from infrastructure.auth.hash_handler import verify_password
 from infrastructure.auth.jwt_handler import create_access_token
 from infrastructure.db import models
+from dotenv import load_dotenv
 import schemas
 import jwt
+import os
 
-SECRET_KEY = "PCt7wo4!"
-ALGORITHM = "HS256"
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
