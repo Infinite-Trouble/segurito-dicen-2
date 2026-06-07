@@ -81,7 +81,7 @@ cd ../../apps/loan-service
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt python-dotenv
+pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic passlib[bcrypt] python-jose pyjwt python-dotenv transbank-sdk
 ```
 
 ### 5.3. scan-service
