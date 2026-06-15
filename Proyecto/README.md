@@ -91,7 +91,7 @@ cd ../../apps/scan-service
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
-pip install fastapi uvicorn google-cloud-vision python-dotenv python-multipart pydantic pymupdf
+pip install fastapi uvicorn google-cloud-vision python-dotenv python-multipart pydantic pymupdf python-jose pyjwt
 ```
 
 ## 6. Dependencias frontend

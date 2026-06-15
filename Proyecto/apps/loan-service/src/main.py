@@ -205,10 +205,9 @@ def obtener_cuotas_prestamo(
     
     return sorted(prestamo.cuotas, key=lambda x: x.id)
 
-
-#===========================================================================
+# =========================================================================
 # FLUJO DE PAGOS: WEBPAY PLUS (TRANSBANK) 
-#===========================================================================
+# =========================================================================
 
 @app.post("/prestamos/{prestamo_id}/iniciar-pago")
 def iniciar_pago_webpay(
@@ -261,7 +260,6 @@ def confirmar_pago_webpay(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    # Transbank devuelve el token. Lo confirmamos y aprobamos el pago.
     token_ws = datos_retorno.get("token_ws")
     if not token_ws:
         raise HTTPException(status_code=400, detail="Transacción sin token válido.")
@@ -273,6 +271,8 @@ def confirmar_pago_webpay(
             IntegrationType.TEST
         )
         tx = Transaction(opciones)
+        
+        # 1. Transbank confirma el token y nos devuelve los datos de la transacción
         response = tx.commit(token_ws)
         
         if response.get("status") != "AUTHORIZED" or response.get("response_code") != 0:
@@ -281,14 +281,37 @@ def confirmar_pago_webpay(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error confirmando pago en Transbank: {str(e)}")
 
+    # 2. Extraer datos del frontend
     prestamo_id = datos_retorno.get("prestamo")
-    cuotas_ids = [int(id) for id in datos_retorno.get("cuotas").split(",")]
+    cuotas_ids_str = datos_retorno.get("cuotas")
+    
+    if not cuotas_ids_str:
+        raise HTTPException(status_code=400, detail="No se especificaron cuotas a pagar.")
+        
+    cuotas_ids = [int(id) for id in cuotas_ids_str.split(",")]
 
+    # 3. Consultar la base de datos como fuente de verdad
     prestamo = db.query(models.Prestamo).filter(models.Prestamo.id == prestamo_id).first()
+    if not prestamo:
+        raise HTTPException(status_code=404, detail="Préstamo no encontrado.")
+        
     cuotas = db.query(models.Cuota).filter(models.Cuota.id.in_(cuotas_ids)).all()
 
-    monto_total = sum(c.monto for c in cuotas)
+    # 4. Calcular el monto real que el usuario DEBÍA pagar según la BD
+    monto_total_db = sum(c.monto for c in cuotas)
+    
+    # 5. Extraer el monto que Transbank EFECTIVAMENTE cobró
+    monto_cobrado_tbk = response.get("amount")
 
+    # 6. VALIDACIÓN CRÍTICA DE SEGURIDAD (Prevención de Fraude)
+    if monto_total_db != monto_cobrado_tbk:
+        # Aquí detenemos el fraude. Si alguien adulteró los IDs, los montos no cuadrarán.
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Inconsistencia financiera: El monto cobrado ({monto_cobrado_tbk}) no coincide con el valor de las cuotas solicitadas ({monto_total_db})."
+        )
+
+    # 7. Si llegamos aquí, la transacción es legítima y segura. Procedemos a actualizar.
     for cuota in cuotas:
         cuota.estado = "PAGADO"
         cuota.fecha_pago = date.today()
@@ -306,8 +329,8 @@ def confirmar_pago_webpay(
     db.commit()
 
     return {
-        "mensaje": "Pago registrado", 
-        "monto": monto_total, 
+        "mensaje": "Pago registrado y validado correctamente", 
+        "monto": monto_cobrado_tbk, 
         "auth_code": response.get('authorization_code')
     }
 
