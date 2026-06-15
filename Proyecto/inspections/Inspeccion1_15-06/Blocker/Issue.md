@@ -4,6 +4,8 @@
 
 ## Issue Description
 
+![Issue2](imgs/Issue_Description.png)
+
 ## Where's the Issue?
 
 > Proyecto/apps/scan-service/src/main.py
@@ -126,3 +128,9 @@ This means that including untrusted data in any of the parameters and using the 
 If you want to learn more about this pitfall, read [our blog post about it.](https://www.sonarsource.com/blog/10-unknown-security-pitfalls-for-python/)
 
 ## More Info
+
+![More1](imgs/More_Info1.png)
+
+![More2](imgs/More_Info2.png)
+
+![More3](imgs/More_Info3.png)
