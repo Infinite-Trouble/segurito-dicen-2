@@ -43,6 +43,10 @@ os.path.join(UPLOAD_DIR, filename)
 FileResponse(file_path)
 ```
 
+![Code1](imgs/Code1.png)
+
+![Code2](imgs/Code2.png)
+
 ## Why is this an Issue?
 
 Path injections occur when an application uses untrusted data to construct a file path and access this file without validating its path first.
