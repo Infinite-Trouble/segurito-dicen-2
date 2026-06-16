@@ -45,16 +45,16 @@ The `responses` parameter in FastAPI endpoint decorators exists specifically to 
 #### What is the potential impact?
 
 When HTTPException responses are not documented:
-- API documentation is incomplete: The automatically generated OpenAPI/Swagger documentation will not show all possible error responses, misleading API consumers about the endpoint’s behavior.
-- Integration difficulties: Developers integrating with your API may be surprised by undocumented error responses, leading to incomplete error handling and potential runtime failures.
-- Reduced trust: Incomplete documentation reduces confidence in the API and may lead developers to question what other behaviors are undocumented.
-- Maintenance challenges: Without explicit documentation, it becomes harder to track what error responses an endpoint can return, making refactoring and maintenance more difficult.
+- **API documentation is incomplete**: The automatically generated OpenAPI/Swagger documentation will not show all possible error responses, misleading API consumers about the endpoint’s behavior.
+- **Integration difficulties**: Developers integrating with your API may be surprised by undocumented error responses, leading to incomplete error handling and potential runtime failures.
+- **Reduced trust**: Incomplete documentation reduces confidence in the API and may lead developers to question what other behaviors are undocumented.
+- **Maintenance challenges**: Without explicit documentation, it becomes harder to track what error responses an endpoint can return, making refactoring and maintenance more difficult.
 
 ## How can I fix it?
 
 ### How can I fix it in FastAPI?
 
-Add the >responses parameter to your endpoint decorator, documenting each HTTPException status code that can be raised. The key should be the status code, and the value should be a dictionary with at least a `description` field explaining when this error occurs.
+Add the `responses` parameter to your endpoint decorator, documenting each HTTPException status code that can be raised. The key should be the status code, and the value should be a dictionary with at least a `description` field explaining when this error occurs.
 
 #### Noncompilant code example
 
