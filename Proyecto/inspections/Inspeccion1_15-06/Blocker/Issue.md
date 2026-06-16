@@ -10,7 +10,7 @@
 
 > Proyecto/apps/scan-service/src/main.py
 
-```
+```bash
 # si llegamos aquí no se manejaron bien los errores y hay "error interno del servidor"
         raise HTTPException(status_code=500, detail=str(e))
 @app.get("/uploads/{filename}")
@@ -75,13 +75,14 @@ The injected path component tampers with the location of a file the application 
 The following code is vulnerable to path injection as it creates a path using untrusted data without validation.
 
 In this particular case, the code can be exploited with the following input to read arbitrary files outside of the intended directory:
-```
+
+```bash
 ../../../../
 ```
 
 #### Noncompliant code example
 
-```
+```bash
 from flask import Flask, request, send_from_directory
 
 app = Flask('example')
@@ -94,7 +95,7 @@ def example():
 
 #### Compilant Solution
 
-```
+```bash
 from flask import Flask, request, send_from_directory
 
 app = Flask('example')

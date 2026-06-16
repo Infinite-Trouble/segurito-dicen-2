@@ -32,7 +32,7 @@
 
 FastAPI automatically generates OpenAPI (Swagger) documentation for your API endpoints. This documentation is crucial for API consumers to understand how to interact with your API, including what error responses they might encounter.
 
-When you raise >HTTPException in your endpoint code, FastAPI will return the specified HTTP status code and error details at runtime. However, unless you explicitly document these exceptions in the >responses parameter of your endpoint decorator, they won’t appear in the automatically generated API documentation.
+When you raise `HTTPException` in your endpoint code, FastAPI will return the specified HTTP status code and error details at runtime. However, unless you explicitly document these exceptions in the `responses` parameter of your endpoint decorator, they won’t appear in the automatically generated API documentation.
 
 This creates a gap between what your API actually does and what the documentation says it does. API consumers looking at your OpenAPI specification will not see these error responses, making it harder for them to:
 - Understand all possible outcomes when calling the endpoint
@@ -40,7 +40,7 @@ This creates a gap between what your API actually does and what the documentatio
 - Debug issues when they encounter undocumented error responses
 - Trust the completeness of your API documentation
 
-The >responses parameter in FastAPI endpoint decorators exists specifically to document all possible HTTP responses, including error cases. By documenting your >HTTPException raises, you ensure that the OpenAPI specification accurately reflects your API’s behavior, improving the developer experience for anyone consuming your API.
+The `responses` parameter in FastAPI endpoint decorators exists specifically to document all possible HTTP responses, including error cases. By documenting your `HTTPException` raises, you ensure that the OpenAPI specification accurately reflects your API’s behavior, improving the developer experience for anyone consuming your API.
 
 #### What is the potential impact?
 
@@ -54,11 +54,11 @@ When HTTPException responses are not documented:
 
 ### How can I fix it in FastAPI?
 
-Add the >responses parameter to your endpoint decorator, documenting each HTTPException status code that can be raised. The key should be the status code, and the value should be a dictionary with at least a >description field explaining when this error occurs.
+Add the >responses parameter to your endpoint decorator, documenting each HTTPException status code that can be raised. The key should be the status code, and the value should be a dictionary with at least a `description` field explaining when this error occurs.
 
 #### Noncompilant code example
 
-```
+```bash
 @app.get("/users/{user_id}")
 def get_user(user_id: int):
     if user_id not in users:
@@ -68,7 +68,7 @@ def get_user(user_id: int):
 
 #### Compliant solution
 
-```
+```bash
 @app.get(
     "/users/{user_id}",
     responses={404: {"description": "User not found"}}
@@ -79,11 +79,11 @@ def get_user(user_id: int):
     return users[user_id]
 ```
 
-For endpoints that can raise multiple different HTTPException status codes, document all of them in the >responses parameter. Each status code should have a clear description of when it occurs.
+For endpoints that can raise multiple different HTTPException status codes, document all of them in the `responses` parameter. Each status code should have a clear description of when it occurs.
 
 #### Noncompilant code example
 
-```
+```bash
 @app.post("/items")
 def create_item(item: Item):
     if not item.name:
@@ -95,7 +95,7 @@ def create_item(item: Item):
 
 #### Compliant solution
 
-```
+```bash
 @app.post(
     "/items",
     responses={
@@ -114,7 +114,7 @@ You can provide more detailed response documentation by including a model or add
 
 #### Noncompilant code example
 
-```
+```bash
 @app.post("/items")
 def create_item(item: Item):
     if not item.name:
@@ -126,7 +126,7 @@ def create_item(item: Item):
 
 #### Compliant solution
 
-```
+```bash
 @app.post(
     "/items",
     responses={
@@ -145,7 +145,7 @@ You can provide more detailed response documentation by including a model or add
 
 #### Noncompilant code example
 
-```
+```bash
 @app.get("/")
 def home():
     raise HTTPException(status_code=400, detail="Bad Request")  # Noncompliant
@@ -153,7 +153,7 @@ def home():
 
 #### Compliant solution
 
-```
+```bash
 @app.get(
     "/",
     responses={
