@@ -8,6 +8,7 @@ from .logic.parsers import DocumentParser
 from . import schemas
 from jose import JWTError, jwt
 from dotenv import load_dotenv
+from pathlib import Path
 import os
 import uuid
 
@@ -41,13 +42,23 @@ ocr_engine = OCREngine()
 def health_check():
     return {"status": "ok", "service": "scan-service"}
 
-@app.post("/analyze", response_model=schemas.ScanResult)
+@app.post(
+    "/analyze", 
+    response_model=schemas.ScanResult,
+    responses={
+        400: {"description": "Error en la solicitud: No se pudo detectar texto o el tipo de documento no está soportado."},
+        415: {"description": "Formato de archivo no válido o malicioso: Solo se permiten imágenes reales (JPG, PNG) o archivos PDF."},
+        422: {"description": "Error de procesamiento: Los datos específicos no pudieron ser extraídos del documento."},
+        500: {"description": "Error interno del servidor al procesar el archivo mediante OCR o el parser."}
+    }
+)
 async def analyze_document(
     file: UploadFile = File(...),
     document_type: str = Form(...) # carnet, liquidacion, cotizaciones, deuda
 ):
     """
     Recibe un archivo (imagen/pdf) y el tipo de documento para extraer sus datos.
+    Documentado con metadatos de respuestas de error para cumplir con los estándares OpenAPI.
     """
     try:
         # 1. Leer el contenido PRIMERO en memoria para validarlo
@@ -58,7 +69,7 @@ async def analyze_document(
         ALLOWED_SIGNATURES = {
             b'\xff\xd8\xff': '.jpg',         # Firma de JPEG/JPG
             b'\x89PNG\r\n\x1a\n': '.png',   # Firma de PNG
-            b'%PDF-': '.pdf'                # Firma de PDF
+            b'%PDF-': '.pdf'                 # Firma de PDF
         }
 
         extension_real = None
@@ -122,14 +133,10 @@ async def analyze_document(
         }
     
     except HTTPException as http_ex:
-        # si se capturó un problema con cloud vision o validación de bytes, que lo muestre
+        # Si es un HTTPException que nosotros lanzamos intencionalmente, lo dejamos pasar
         raise http_ex
-
-    except HTTPException:
-        # Si el error es un HTTPException (400, 422) que nosotros lanzamos intencionalmente, lo dejamos pasar
-        raise 
     except Exception as e:
-        # si llegamos aquí no se manejaron bien los errores y hay "error interno del servidor"
+        # Error no manejado mapeado a un error interno estructurado
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/uploads/{filename}")
@@ -138,7 +145,9 @@ def obtener_archivo_seguro(
     token: str = Depends(oauth2_scheme)
 ):
     """
-    Endpoint protegido. Reemplaza a StaticFiles manteniendo la misma URL.
+    Endpoint protegido.
+    Reemplaza a StaticFiles manteniendo la misma URL.
+    (Mitigación implementada contra Path Injection según SonarQube)
     """
     # 1. Validar el Token JWT
     try:
@@ -149,10 +158,21 @@ def obtener_archivo_seguro(
     except JWTError:
         raise HTTPException(status_code=401, detail="No autorizado o sesión expirada")
 
-    # 2. Verificar que el archivo existe en el disco
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.exists(file_path):
+    # 2. Sanitizar el nombre del archivo
+    # os.path.basename elimina cualquier intento de inyección de directorios (ej. "../../")
+    safe_filename = os.path.basename(filename)
+    
+    # 3. Construir y resolver las rutas absolutas usando pathlib
+    base_dir = Path(UPLOAD_DIR).resolve()
+    file_path = (base_dir / safe_filename).resolve()
+
+    # 4. Validar matemáticamente que el archivo final no escapa de UPLOAD_DIR
+    if not str(file_path).startswith(str(base_dir)):
+        raise HTTPException(status_code=400, detail="Ruta de archivo inválida o maliciosa")
+
+    # 5. Verificar que el archivo existe en el disco y es un archivo real
+    if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
-    # 3. Servir el archivo de forma segura
+    # 6. Servir el archivo de forma segura
     return FileResponse(file_path)
