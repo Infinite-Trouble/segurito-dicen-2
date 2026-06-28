@@ -11,20 +11,21 @@ class ErrorResponse(BaseModel):
     detail: str
 
 class CedulaData(BaseModel):
-    nombre: Optional[str]
-    rut: Optional[str]
-    numero_cedula: Optional[str]
-    vigencia: Optional[bool]
+    nombre: str
+    rut: str
+    numero_cedula: str
+    vigencia: bool
     
 class LiquidacionData(BaseModel):
-    total_haberes: Optional[int]
-    total_descuento: Optional[int]
-    sueldo_liquido: Optional[int]
+    total_haberes: int | None = None
+    total_descuento: int | None = None
+    sueldo_liquido: int | None = None
 
 class CotizacionesData(BaseModel):
     meses_cotizados_consecutivos: int
-    rut_empleador: Optional[str]
+    rut_empleador: Optional[str]=None
 
 class DeudaData(BaseModel):
     deudas_totales: int
     mora_90_dias: int
+
