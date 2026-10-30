@@ -1,0 +1,417 @@
+{
+  "version": "2.2.0",
+  "summary": {
+    "title": "Threat Model - Plataforma de Préstamos",
+    "owner": "TMR",
+    "description": "Modelo de amenazas STRIDE y Diagrama de Flujo de Datos (DFD) para el sistema de solicitud, evaluación crediticia y gestión de préstamos de consumo."
+  },
+  "detail": {
+    "contributors": [
+      {
+        "name": "TMR"
+      }
+    ],
+    "diagrams": [
+      {
+        "title": "DFD Nivel 1 - Arquitectura de Microservicios Segurito Dicen",
+        "id": 0,
+        "diagramType": "STRIDE",
+        "placeholder": "DFD Level 1",
+        "size": {
+          "height": 950,
+          "width": 1450
+        },
+        "diagramJson": {
+          "cells": [
+            {
+              "type": "tm.Boundary",
+              "id": "boundary-public-internet",
+              "smooth": true,
+              "vertices": [
+                { "x": 260, "y": 40 },
+                { "x": 260, "y": 860 }
+              ],
+              "attrs": {
+                "text": {
+                  "text": "Límite de Confianza: Internet / Cliente Desconfiable"
+                }
+              }
+            },
+            {
+              "type": "tm.Boundary",
+              "id": "boundary-backend-cluster",
+              "smooth": true,
+              "vertices": [
+                { "x": 620, "y": 40 },
+                { "x": 620, "y": 860 }
+              ],
+              "attrs": {
+                "text": {
+                  "text": "Límite de Confianza: Red Interna Microservicios y DB"
+                }
+              }
+            },
+            {
+              "type": "tm.Actor",
+              "id": "actor-cliente-web",
+              "position": { "x": 50, "y": 380 },
+              "size": { "width": 160, "height": 80 },
+              "attrs": {
+                "text": {
+                  "text": "Cliente Web / Navegador\n(Usuario Solicitante)"
+                }
+              },
+              "threats": []
+            },
+            {
+              "type": "tm.Process",
+              "id": "proc-frontend-spa",
+              "position": { "x": 340, "y": 380 },
+              "size": { "width": 180, "height": 100 },
+              "attrs": {
+                "text": {
+                  "text": "Frontend SPA\n(React / Vite :5173)"
+                }
+              },
+              "threats": []
+            },
+            {
+              "type": "tm.Process",
+              "id": "proc-user-service",
+              "position": { "x": 720, "y": 120 },
+              "size": { "width": 190, "height": 110 },
+              "attrs": {
+                "text": {
+                  "text": "User Service\n(FastAPI :8000)\n/register, /login, /perfil"
+                }
+              },
+              "threats": []
+            },
+            {
+              "type": "tm.Process",
+              "id": "proc-loan-service",
+              "position": { "x": 720, "y": 370 },
+              "size": { "width": 210, "height": 120 },
+              "attrs": {
+                "text": {
+                  "text": "Loan Service\n(FastAPI :8001)\n/solicitud, /prestamos"
+                }
+              },
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "ruleId": "41b8a957-c812-4217-bf41-6e3e1577d611",
+                  "title": "Manipulación de Parámetros Financieros en Creación de Solicitud (Tampering / Elevación de Privilegios)",
+                  "type": "Tampering",
+                  "modelType": "STRIDE",
+                  "status": "Open",
+                  "severity": "High",
+                  "description": "El endpoint /solicitud en loan-service recibe ingresos líquidos y deudas directamente desde el payload JSON provisto por el cliente sin verificar su correspondencia con el OCR ni firmar criptográficamente los datos extraídos. El frontend permite editar estos campos en el formulario, permitiendo que un usuario infle su sueldo o borre deudas para forzar la aprobación fraudulenta de un crédito bancario.",
+                  "mitigation": "Hacer que el motor de scoring valide los datos extraídos directamente con el Scan Service o mediante tokens HMAC firmados por el servidor que certifiquen los valores extraídos del documento. Impedir la edición arbitraria de datos financieros en el flujo de aprobación y contrastar el RUT del carnet con el RUT del usuario autenticado en sesión."
+                },
+                {
+                  "ruleId": "99d3e8e1-5bc4-4061-a083-d5d342fe19cd",
+                  "title": "Manipulación de Retorno y Ausencia de Autenticación en Confirmación de Pagos Webpay (Tampering / Repudio)",
+                  "type": "Tampering",
+                  "modelType": "STRIDE",
+                  "status": "Open",
+                  "severity": "High",
+                  "description": "El endpoint /prestamos/confirmar-pago es público y no exige autenticación de sesión del titular de la cuenta. Los identificadores de préstamo y cuotas son recibidos como parámetros de consulta en el retorno del navegador. Además, las credenciales comerciales de Transbank están hardcodeadas en código fuente, permitiendo intentos de repetición o desincronización de estados de pago.",
+                  "mitigation": "Exigir autenticación de usuario en /confirmar-pago verificando que el usuario sea el dueño legítimo del préstamo. Implementar idempotencia con tabla de auditoría de transacciones (token_ws único) y extraer credenciales a variables de entorno protegidas."
+                }
+              ]
+            },
+            {
+              "type": "tm.Process",
+              "id": "proc-scan-service",
+              "position": { "x": 720, "y": 640 },
+              "size": { "width": 200, "height": 110 },
+              "attrs": {
+                "text": {
+                  "text": "Scan Service\n(FastAPI :8002)\n/analyze, /uploads"
+                }
+              },
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "ruleId": "c29f4510-8501-49b2-9d7a-1158a5be62aa",
+                  "title": "Denegación de Servicio y Agotamiento de Facturación en OCR Cloud (Denial of Service)",
+                  "type": "Denial of service",
+                  "modelType": "STRIDE",
+                  "status": "Open",
+                  "severity": "High",
+                  "description": "El endpoint POST /analyze carece de autenticación, control de tasa (rate limiting) y validación de tamaño máximo de archivo antes de cargar el buffer en memoria. Un atacante anónimo puede automatizar miles de peticiones de gran tamaño, agotando la RAM y espacio en disco del servidor e inflando los costos de facturación de Google Cloud Vision API.",
+                  "mitigation": "Exigir autenticación obligatoria mediante JWT en /analyze, fijar un límite estricto de tamaño de carga (máx. 5 MB), aplicar Rate Limiting (ej. 5 peticiones/minuto por IP/usuario con slowapi) y establecer alertas de presupuesto y cuotas máximas diarias en la consola de Google Cloud."
+                }
+              ]
+            },
+            {
+              "type": "tm.Store",
+              "id": "store-users-db",
+              "position": { "x": 1120, "y": 120 },
+              "size": { "width": 180, "height": 90 },
+              "attrs": {
+                "text": {
+                  "text": "PostgreSQL: users_db\n(Puerto expuesto 5433)\nUsuarios y Cuentas"
+                }
+              },
+              "storesCredentials": true,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "ruleId": "3b89ef54-7622-498c-b011-85d1e4e5cf44",
+                  "title": "Exposición de Credenciales Maestras en Repositorio y Base de Datos Expuesta (Information Disclosure / Tampering)",
+                  "type": "Information disclosure",
+                  "modelType": "STRIDE",
+                  "status": "Open",
+                  "severity": "High",
+                  "description": "Las credenciales maestras de la base de datos (DB_USER=user_admin, DB_PASSWORD=PCt7wo4!), contraseñas de Gmail y SECRET_KEY se encuentran almacenadas en texto plano en archivos .env commiteados en el repositorio Git (el archivo .gitignore solo excluye .R*). Adicionalmente, el puerto 5433 está expuesto públicamente al host en docker-compose.yml sin aislamiento perimetral.",
+                  "mitigation": "Eliminar de inmediato los archivos .env del árbol de Git y rotar todas las credenciales maestras, hashes y secretos JWT. Actualizar el archivo .gitignore para bloquear todos los archivos *.env. En docker-compose.yml, eliminar el mapeo público del puerto 5433:5432 para que la base de datos solo sea accesible por los contenedores a través de la red interna de Docker."
+                }
+              ]
+            },
+            {
+              "type": "tm.Store",
+              "id": "store-loans-db",
+              "position": { "x": 1120, "y": 380 },
+              "size": { "width": 180, "height": 90 },
+              "attrs": {
+                "text": {
+                  "text": "PostgreSQL: loans_db\nSolicitudes, Préstamos,\nCuotas y Documentos"
+                }
+              },
+              "storesCredentials": false,
+              "threats": []
+            },
+            {
+              "type": "tm.Store",
+              "id": "store-uploads-fs",
+              "position": { "x": 1120, "y": 650 },
+              "size": { "width": 180, "height": 90 },
+              "attrs": {
+                "text": {
+                  "text": "Sistema de Archivos\n(uploads/)\nCédulas y Liquidaciones"
+                }
+              },
+              "storesCredentials": false,
+              "threats": []
+            },
+            {
+              "type": "tm.Actor",
+              "id": "actor-google-vision",
+              "position": { "x": 1120, "y": 800 },
+              "size": { "width": 180, "height": 70 },
+              "attrs": {
+                "text": {
+                  "text": "Google Cloud Vision API\n(OCR Externo)"
+                }
+              },
+              "threats": []
+            },
+            {
+              "type": "tm.Actor",
+              "id": "actor-transbank",
+              "position": { "x": 480, "y": 200 },
+              "size": { "width": 170, "height": 70 },
+              "attrs": {
+                "text": {
+                  "text": "Transbank Webpay Plus\n(Pasarela de Pago)"
+                }
+              },
+              "threats": []
+            },
+            {
+              "type": "tm.Actor",
+              "id": "actor-gmail-smtp",
+              "position": { "x": 480, "y": 550 },
+              "size": { "width": 170, "height": 70 },
+              "attrs": {
+                "text": {
+                  "text": "Google Gmail SMTP\n(Notificaciones Estado)"
+                }
+              },
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-cliente-a-frontend",
+              "source": { "id": "actor-cliente-web" },
+              "target": { "id": "proc-frontend-spa" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": { "text": "HTTPS / Interfaz de Usuario" }
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-frontend-a-userservice",
+              "source": { "id": "proc-frontend-spa" },
+              "target": { "id": "proc-user-service" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "HTTP /register, /login, /perfil"
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-frontend-a-loanservice",
+              "source": { "id": "proc-frontend-spa" },
+              "target": { "id": "proc-loan-service" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "HTTP /solicitud (Bearer JWT)"
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-frontend-a-scanservice",
+              "source": { "id": "proc-frontend-spa" },
+              "target": { "id": "proc-scan-service" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "HTTP POST /analyze (Multipart)"
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-cliente-download-uploads",
+              "source": { "id": "proc-frontend-spa" },
+              "target": { "id": "proc-scan-service" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "GET /uploads/{filename} (Descarga IDOR)"
+                  }
+                }
+              ],
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "ruleId": "8f3b612d-1294-43cb-986c-7f5d448c3b12",
+                  "title": "Fuga Masiva de Documentos Sensibles por Falla de Autorización IDOR/BOLA (Information Disclosure)",
+                  "type": "Information disclosure",
+                  "modelType": "STRIDE",
+                  "status": "Open",
+                  "severity": "High",
+                  "description": "El endpoint GET /uploads/{filename} en scan-service valida que exista un token JWT firmado pero no comprueba que el archivo solicitado pertenezca al usuario de la sesión. Cualquier usuario autenticado puede solicitar y descargar los documentos de identidad (cédulas), liquidaciones de sueldo y certificados de cotizaciones de terceros. Además, el tráfico transita en texto claro sobre HTTP.",
+                  "mitigation": "Vincular cada archivo subido al ID del usuario propietario en la base de datos y verificar autorización en la descarga (control BOLA/IDOR). Migrar la descarga a URLs prefirmadas de corta duración (ej. S3 Presigned URLs de 15 minutos) y forzar transporte seguro TLS/HTTPS."
+                }
+              ]
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-userservice-a-db",
+              "source": { "id": "proc-user-service" },
+              "target": { "id": "store-users-db" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "TCP 5432 SQL Queries (Users Table)"
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-loanservice-a-db",
+              "source": { "id": "proc-loan-service" },
+              "target": { "id": "store-loans-db" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "TCP 5432 SQL Queries (Loans DB)"
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-scanservice-a-fs",
+              "source": { "id": "proc-scan-service" },
+              "target": { "id": "store-uploads-fs" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "Escritura de archivos en disco"
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-scanservice-a-vision",
+              "source": { "id": "proc-scan-service" },
+              "target": { "id": "actor-google-vision" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "HTTPS Cloud Vision API Client"
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-loanservice-a-transbank",
+              "source": { "id": "proc-loan-service" },
+              "target": { "id": "actor-transbank" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "HTTPS Webpay Plus API REST"
+                  }
+                }
+              ],
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "id": "flow-loanservice-a-gmail",
+              "source": { "id": "proc-loan-service" },
+              "target": { "id": "actor-gmail-smtp" },
+              "labels": [
+                {
+                  "position": 0.5,
+                  "attrs": {
+                    "text": "SMTP SSL :465 Notificaciones"
+                  }
+                }
+              ],
+              "threats": []
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
