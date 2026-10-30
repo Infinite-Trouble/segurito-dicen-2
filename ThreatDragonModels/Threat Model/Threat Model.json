@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "version": "2.2.0",
   "summary": {
     "title": "Threat Model - Plataforma de Préstamos",
@@ -414,32 +413,5 @@
         }
       }
     ]
-=======
-  "version": "2.6.2",
-  "release_version": "",
-  "released_at": "",
-  "summary": {
-    "title": "Threat Model",
-    "owner": "TMR",
-    "description": "Modelo de amenaza del sistema de préstamo hecho en 3 microservicios: manejo de usuarios, manejo de préstamos y ocr. Integración externa con 2 APIs, la de google vision y la de redbanc.",
-    "id": 0
-  },
-  "detail": {
-    "contributors": [],
-    "diagrams": [
-      {
-        "id": 0,
-        "title": "Diagrama STRIDE",
-        "diagramType": "STRIDE",
-        "placeholder": "Descripción de nuevo diagrama STRIDE",
-        "thumbnail": "./public/content/images/thumbnail.stride.jpg",
-        "version": "2.6.2",
-        "cells": []
-      }
-    ],
-    "diagramTop": 1,
-    "reviewer": "TMR",
-    "threatTop": 0
->>>>>>> 0e87aaf75e21736a22590243455b220a3c65e6c5
   }
 }
