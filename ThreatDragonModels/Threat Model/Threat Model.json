@@ -1,0 +1,18 @@
+{
+  "version": "2.6.2",
+  "release_version": "0.0.1",
+  "released_at": "2026-10-30",
+  "summary": {
+    "title": "Threat Model",
+    "owner": "Infinite-Trouble",
+    "description": "Sistema de 3 microservicios (gestión de usuarios, simulación de préstamos, OCR datos personales) para simulación y entrega de préstamos. Dockerizado, con conexión a la Google Vision API y uso de 2 bases de datos (una para usuarios, otra para préstamos).",
+    "id": 0
+  },
+  "detail": {
+    "contributors": [],
+    "diagrams": [],
+    "diagramTop": 0,
+    "reviewer": "Infinite-Trouble",
+    "threatTop": 0
+  }
+}
