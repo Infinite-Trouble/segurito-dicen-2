@@ -1576,7 +1576,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F1 Interacción UI"
+                    "text": "Interacción UI"
                   }
                 },
                 "position": 0.5
@@ -1759,7 +1759,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "/analyze multipart (imágenes y PDF)"
+                    "text": "/analyze(imágenes y PDF)"
                   }
                 },
                 "position": 0.5
