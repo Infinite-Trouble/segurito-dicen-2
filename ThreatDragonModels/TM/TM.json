@@ -1666,7 +1666,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "solicitud / pagos (HTTP JSON)",
+              "name": "solicitud / pagos ",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
