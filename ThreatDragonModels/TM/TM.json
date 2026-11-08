@@ -1,7 +1,7 @@
 {
   "version": "2.6.2",
   "summary": {
-    "title": "Segurito Dicen - Sistema de Préstamos Online",
+    "title": "Sistema de préstamos de consumo",
     "owner": "Tomás Molina R.",
     "description": "Plataforma web de préstamos de consumo en microservicios (user-service, loan-service, scan-service) con frontend React/Vite, PostgreSQL, Google Cloud Vision, Transbank Webpay Plus y Gmail SMTP.",
     "id": 0
@@ -11,7 +11,7 @@
     "diagrams": [
       {
         "id": 0,
-        "title": "DFD Nivel 0 - Segurito Dicen",
+        "title": "DFD",
         "diagramType": "STRIDE",
         "placeholder": "Nuevo diagrama STRIDE",
         "thumbnail": "./public/content/images/thumbnail.stride.jpg",
@@ -1559,7 +1559,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F1 Interacción UI",
+              "name": "Interacción UI",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -1611,7 +1611,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F2 login / perfil (HTTP JSON)",
+              "name": "login / perfil ",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -1631,7 +1631,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F2 login / perfil (HTTP JSON)"
+                    "text": "login / perfil "
                   }
                 },
                 "position": 0.5
@@ -1666,7 +1666,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F3 solicitud / pagos (HTTP JSON)",
+              "name": "solicitud / pagos (HTTP JSON)",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -1685,7 +1685,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F3 solicitud / pagos (HTTP JSON)"
+                    "text": "solicitud / pagos"
                   }
                 },
                 "position": 0.5
@@ -1725,7 +1725,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F4 /analyze multipart (cédula, sueldo)",
+              "name": " /analyze (imágenes y PDF)",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -1759,7 +1759,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F4 /analyze multipart (cédula, sueldo)"
+                    "text": "/analyze multipart (imágenes y PDF)"
                   }
                 },
                 "position": 0.5
@@ -1799,7 +1799,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F5 SQL usuarios y hashes",
+              "name": "SQL usuarios y hashes",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -1816,7 +1816,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F5 SQL usuarios y hashes"
+                    "text": " SQL usuarios y hashes"
                   }
                 },
                 "position": 0.5
@@ -1851,7 +1851,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F6 SQL solicitudes y cuotas",
+              "name": "SQL solicitudes y cuotas",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -1870,7 +1870,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F6 SQL solicitudes y cuotas"
+                    "text": "SQL solicitudes y cuotas"
                   }
                 },
                 "position": 0.5
@@ -1910,7 +1910,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F7 escritura de archivos",
+              "name": "escritura de archivos",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -1927,7 +1927,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F7 escritura de archivos"
+                    "text": "escritura de archivos"
                   }
                 },
                 "position": 0.5
@@ -1962,7 +1962,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F8 imagen para OCR",
+              "name": "imagen para OCR",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -1981,7 +1981,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F8 imagen para OCR"
+                    "text": "imagen para OCR"
                   }
                 },
                 "position": 0.5
@@ -2016,7 +2016,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F9 crear/confirmar transacción",
+              "name": "pago de cuota",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -2033,7 +2033,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F9 crear/confirmar transacción"
+                    "text": "pago de cuota"
                   }
                 },
                 "position": 0.5
@@ -2068,7 +2068,7 @@
             "connector": "smooth",
             "data": {
               "type": "tm.Flow",
-              "name": "F10 correo de estado",
+              "name": "correo de estado",
               "description": "",
               "outOfScope": false,
               "isTrustBoundary": false,
@@ -2085,7 +2085,7 @@
               {
                 "attrs": {
                   "label": {
-                    "text": "F10 correo de estado"
+                    "text": "correo de estado"
                   }
                 },
                 "position": 0.5
